@@ -21,6 +21,7 @@ pub fn run() {
             patcher::patcher_check,
             patcher::patcher_run,
             patcher::patcher_repair,
+            patcher::patcher_cancel,
             realmlist::realmlist_read,
             realmlist::realmlist_write,
             cache::cache_clear,
