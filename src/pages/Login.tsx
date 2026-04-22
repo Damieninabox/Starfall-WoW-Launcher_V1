@@ -11,6 +11,7 @@ export default function Login() {
   const [username, setUsername] = useState(pendingUsername ?? "");
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
+  const [remember, setRemember] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -19,14 +20,14 @@ export default function Login() {
     setBusy(true);
     setError(null);
     try {
-      const result = await login(username.trim(), password);
+      const result = await login(username.trim(), password, remember);
       if (result.kind === "needs2fa") {
         setPending(result.pendingToken, username.trim());
       } else {
         await finishAuth(result.username);
       }
     } catch (err) {
-      setError(String(err));
+      setError(prettyError(err));
     } finally {
       setBusy(false);
     }
@@ -38,14 +39,19 @@ export default function Login() {
     setBusy(true);
     setError(null);
     try {
-      const result = await login2fa(pendingToken, code.trim(), pendingUsername ?? username.trim());
+      const result = await login2fa(
+        pendingToken,
+        code.trim(),
+        pendingUsername ?? username.trim(),
+        remember,
+      );
       if (result.kind === "ok") {
         await finishAuth(result.username);
       } else {
         setError("Unexpected 2FA response.");
       }
     } catch (err) {
-      setError(String(err));
+      setError(prettyError(err));
     } finally {
       setBusy(false);
     }
@@ -74,16 +80,13 @@ export default function Login() {
         <img
           src="/logo.png"
           alt="Starfall"
-          className="h-20 w-20 rounded-full object-contain drop-shadow-[0_0_25px_rgba(124,58,237,0.45)]"
+          className="h-40 w-40 object-contain drop-shadow-[0_0_35px_rgba(124,58,237,0.55)]"
         />
-        <div className="text-4xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-cyan-200 to-violet-400">
-          Starfall
-        </div>
         <div className="text-sm text-neutral-400">Sign in to continue</div>
       </div>
 
       {!showing2fa && (
-        <form onSubmit={submitLogin} className="flex flex-col gap-3 rounded-lg border border-neutral-800 bg-neutral-900/60 p-6">
+        <form onSubmit={submitLogin} className="flex flex-col gap-3 rounded-lg border border-violet-500/20 bg-neutral-900/60 p-6">
           <label className="flex flex-col gap-1 text-sm">
             <span className="text-neutral-400">Username</span>
             <input
@@ -104,6 +107,15 @@ export default function Login() {
               required
             />
           </label>
+          <label className="flex cursor-pointer items-center gap-2 text-sm text-neutral-300 select-none">
+            <input
+              type="checkbox"
+              checked={remember}
+              onChange={(e) => setRemember(e.currentTarget.checked)}
+              className="h-4 w-4 accent-violet-500"
+            />
+            Stay signed in on this device
+          </label>
           <button
             type="submit"
             disabled={busy}
@@ -111,14 +123,11 @@ export default function Login() {
           >
             {busy ? "Signing in…" : "Sign in"}
           </button>
-          <div className="text-center text-xs text-neutral-500">
-            Use any account from <span className="font-mono">cata_auth</span>.
-          </div>
         </form>
       )}
 
       {showing2fa && (
-        <form onSubmit={submit2fa} className="flex flex-col gap-3 rounded-lg border border-neutral-800 bg-neutral-900/60 p-6">
+        <form onSubmit={submit2fa} className="flex flex-col gap-3 rounded-lg border border-violet-500/20 bg-neutral-900/60 p-6">
           <div className="text-sm text-neutral-300">
             Two-factor required for <span className="font-mono">{pendingUsername}</span>.
           </div>
@@ -154,10 +163,22 @@ export default function Login() {
 
       {error && (
         <div className="rounded border border-red-900/60 bg-red-950/40 p-3 text-sm text-red-200">
-          {error}
+          <div className="font-semibold text-red-300">Login failed</div>
+          <div className="mt-1 font-mono text-xs">{error}</div>
+          {error.toLowerCase().includes("reach") && (
+            <div className="mt-2 text-xs text-neutral-400">
+              The CMS at <span className="font-mono">127.0.0.1:8787</span> isn't
+              responding. Start <span className="font-mono">node server.js</span> in{" "}
+              <span className="font-mono">mock-server/</span>.
+            </div>
+          )}
         </div>
       )}
     </div>
   );
 }
 
+function prettyError(err: unknown): string {
+  const msg = String(err);
+  return msg.replace(/^Error:\s*/, "");
+}

@@ -2,12 +2,21 @@
 //! everything flows through the CMS. Tokens live in Windows Credential
 //! Manager via the `keyring` crate; never in JSON on disk.
 
+use std::sync::{Mutex, OnceLock};
+
 use keyring::Entry;
 use serde::{Deserialize, Serialize};
 
 const KEYRING_SERVICE: &str = "com.starfall.launcher";
 const TOKEN_KEY: &str = "access-token";
 const REFRESH_KEY: &str = "refresh-token";
+
+/// Process-lifetime tokens when the user doesn't tick "stay signed in".
+/// Holds (access_token, refresh_token). Cleared on logout or process exit.
+fn ephemeral() -> &'static Mutex<Option<(String, String)>> {
+    static E: OnceLock<Mutex<Option<(String, String)>>> = OnceLock::new();
+    E.get_or_init(|| Mutex::new(None))
+}
 
 #[derive(thiserror::Error, Debug)]
 pub enum AuthError {
@@ -58,19 +67,43 @@ fn client() -> Result<reqwest::Client, AuthError> {
         .map_err(|e| AuthError::Network(e.to_string()))
 }
 
-fn store_tokens(token: &str, refresh: &str) -> Result<(), AuthError> {
-    Entry::new(KEYRING_SERVICE, TOKEN_KEY)?.set_password(token)?;
-    Entry::new(KEYRING_SERVICE, REFRESH_KEY)?.set_password(refresh)?;
+fn store_tokens(token: &str, refresh: &str, remember: bool) -> Result<(), AuthError> {
+    if remember {
+        clear_ephemeral();
+        Entry::new(KEYRING_SERVICE, TOKEN_KEY)?.set_password(token)?;
+        Entry::new(KEYRING_SERVICE, REFRESH_KEY)?.set_password(refresh)?;
+    } else {
+        clear_keyring_tokens();
+        if let Ok(mut e) = ephemeral().lock() {
+            *e = Some((token.to_string(), refresh.to_string()));
+        }
+    }
     Ok(())
 }
 
-fn clear_tokens() -> Result<(), AuthError> {
+fn clear_keyring_tokens() {
     let _ = Entry::new(KEYRING_SERVICE, TOKEN_KEY).and_then(|e| e.delete_credential());
     let _ = Entry::new(KEYRING_SERVICE, REFRESH_KEY).and_then(|e| e.delete_credential());
+}
+
+fn clear_ephemeral() {
+    if let Ok(mut e) = ephemeral().lock() {
+        *e = None;
+    }
+}
+
+fn clear_tokens() -> Result<(), AuthError> {
+    clear_keyring_tokens();
+    clear_ephemeral();
     Ok(())
 }
 
 fn read_access_token() -> Option<String> {
+    if let Ok(e) = ephemeral().lock() {
+        if let Some((t, _)) = e.as_ref() {
+            return Some(t.clone());
+        }
+    }
     Entry::new(KEYRING_SERVICE, TOKEN_KEY)
         .ok()?
         .get_password()
@@ -123,6 +156,7 @@ pub async fn auth_login(
     cms_base: String,
     username: String,
     password: String,
+    remember: bool,
 ) -> Result<LoginResult, AuthError> {
     #[derive(Serialize)]
     struct Body<'a> {
@@ -160,7 +194,7 @@ pub async fn auth_login(
         });
     }
     let ok = into_login_ok(raw)?;
-    store_tokens(&ok.token, &ok.refresh_token)?;
+    store_tokens(&ok.token, &ok.refresh_token, remember)?;
     Ok(LoginResult::Ok { username })
 }
 
@@ -170,6 +204,7 @@ pub async fn auth_login_2fa(
     pending_token: String,
     code: String,
     username: String,
+    remember: bool,
 ) -> Result<LoginResult, AuthError> {
     #[derive(Serialize)]
     struct Body<'a> {
@@ -201,7 +236,7 @@ pub async fn auth_login_2fa(
         .await
         .map_err(|e| AuthError::Parse(e.to_string()))?;
     let ok = into_login_ok(raw)?;
-    store_tokens(&ok.token, &ok.refresh_token)?;
+    store_tokens(&ok.token, &ok.refresh_token, remember)?;
     Ok(LoginResult::Ok { username })
 }
 

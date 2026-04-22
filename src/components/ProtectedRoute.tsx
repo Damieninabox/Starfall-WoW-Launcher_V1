@@ -1,28 +1,51 @@
 import { useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
-import { hasToken } from "../api/auth";
+import { hasToken, logout } from "../api/auth";
+import { api } from "../api/cms";
 import { useAuthStore } from "../state/auth";
 
 export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const username = useAuthStore((s) => s.username);
+  const setAuthed = useAuthStore((s) => s.setAuthed);
   const clear = useAuthStore((s) => s.clear);
+
   const [checked, setChecked] = useState(false);
   const [tokenOk, setTokenOk] = useState(false);
 
   useEffect(() => {
-    hasToken()
-      .then((ok) => {
-        if (!ok) clear();
-        setTokenOk(ok);
+    (async () => {
+      try {
+        const ok = await hasToken();
+        if (!ok) {
+          clear();
+          setTokenOk(false);
+          setChecked(true);
+          return;
+        }
+        if (!username) {
+          // we have a keyring token but no in-memory user — bootstrap from /me
+          try {
+            const me = await api.me();
+            setAuthed({ username: me.username, displayName: me.displayName, has2fa: me.has2fa });
+          } catch {
+            // token is stale or CMS unreachable — force a fresh login
+            try { await logout(); } catch { /* ignore */ }
+            clear();
+            setTokenOk(false);
+            setChecked(true);
+            return;
+          }
+        }
+        setTokenOk(true);
         setChecked(true);
-      })
-      .catch(() => {
+      } catch {
         clear();
         setTokenOk(false);
         setChecked(true);
-      });
-  }, [clear]);
+      }
+    })();
+  }, [clear, setAuthed, username]);
 
   if (!checked) {
     return <div className="p-6 text-sm text-neutral-500">Checking session…</div>;
@@ -32,4 +55,3 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
   }
   return <>{children}</>;
 }
-

@@ -1,6 +1,10 @@
 import { create } from "zustand";
-import { persist, createJSONStorage } from "zustand/middleware";
 
+// Auth state is NOT persisted. Tokens live in Windows Credential Manager
+// (keyring) only when the user ticked "Stay signed in" at login; otherwise
+// they're in-memory and die with the launcher process. On startup
+// ProtectedRoute rehydrates this store from /api/account/me if a token
+// is available.
 interface AuthState {
   username: string | null;
   displayName: string | null;
@@ -13,35 +17,26 @@ interface AuthState {
   clear: () => void;
 }
 
-export const useAuthStore = create<AuthState>()(
-  persist(
-    (set) => ({
+export const useAuthStore = create<AuthState>((set) => ({
+  username: null,
+  displayName: null,
+  has2fa: false,
+  pendingToken: null,
+
+  setAuthed: ({ username, displayName, has2fa }) =>
+    set({
+      username,
+      displayName: displayName ?? username,
+      has2fa: has2fa ?? false,
+      pendingToken: null,
+    }),
+  setPending: (token, username) => set({ pendingToken: token, username }),
+  update2fa: (enabled) => set({ has2fa: enabled }),
+  clear: () =>
+    set({
       username: null,
       displayName: null,
       has2fa: false,
       pendingToken: null,
-
-      setAuthed: ({ username, displayName, has2fa }) =>
-        set({
-          username,
-          displayName: displayName ?? username,
-          has2fa: has2fa ?? false,
-          pendingToken: null,
-        }),
-      setPending: (token, username) => set({ pendingToken: token, username }),
-      update2fa: (enabled) => set({ has2fa: enabled }),
-      clear: () =>
-        set({
-          username: null,
-          displayName: null,
-          has2fa: false,
-          pendingToken: null,
-        }),
     }),
-    {
-      name: "starfall.auth",
-      storage: createJSONStorage(() => localStorage),
-    },
-  ),
-);
-
+}));

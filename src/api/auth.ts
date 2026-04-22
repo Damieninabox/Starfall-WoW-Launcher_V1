@@ -14,11 +14,16 @@ function normalize(raw: RawLoginResult): LoginResult {
   return { kind: "needs2fa", pendingToken: raw.pendingToken };
 }
 
-export async function login(username: string, password: string): Promise<LoginResult> {
+export async function login(
+  username: string,
+  password: string,
+  remember: boolean,
+): Promise<LoginResult> {
   const raw = await invoke<RawLoginResult>("auth_login", {
     cmsBase: cmsBase(),
     username,
     password,
+    remember,
   });
   return normalize(raw);
 }
@@ -27,12 +32,14 @@ export async function login2fa(
   pendingToken: string,
   code: string,
   username: string,
+  remember: boolean,
 ): Promise<LoginResult> {
   const raw = await invoke<RawLoginResult>("auth_login_2fa", {
     cmsBase: cmsBase(),
     pendingToken,
     code,
     username,
+    remember,
   });
   return normalize(raw);
 }
