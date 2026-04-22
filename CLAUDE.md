@@ -55,26 +55,29 @@ starfall-wow-launcher/
 6. **Atomic writes** — download to `<path>.partial`, rename on verified hash.
 7. **Install location default:** `%LOCALAPPDATA%/Starfall/` (no admin required); user-overridable.
 
-## Current scope (Session 1)
+## Current scope (Sessions 1 + 2)
 
-Scaffold → mock manifest server → patcher core → minimal Install page → 9-step E2E verify.
+**Shipped:**
+- Patcher core: check/run/repair with resume, hash cache, atomic replace, parallel downloads, cancel
+- Install page: folder picker, Check / Start / Pause / Repair, live progress
+- Mock manifest server (`mock-server/`) on `:8787` for dev
+- Realmlist read/write — UTF-8 no BOM, LF endings, writes to every `Data/<locale>/` folder
+- Cache clear — wipes `Cache/` + `WDB/` contents through `fs_safety`; never touches `WTF/`
+- Launch — spawns `Wow-64.exe` (falls back to `Wow.exe`), no shell
+- Home page: expansion picker (Cata active, 4 placeholders) + end-to-end **Play** flow: check → patch → sync realmlist → clear cache (per policy) → launch
+- Settings page: install dir, realmlist server, cache policy (on-launch / weekly / manual / off), launch args
+- Persistent launcher settings in `localStorage` via Zustand `persist`
 
-**In scope now:**
-- Patcher (check/run/repair) with resume, hash cache, atomic replace, parallel downloads
-- Install page (folder picker, progress panel, pause, repair)
-- Mock server serving `/manifests/cata.json` + three test files with `Range` support
-
-**Out of scope this session (do not start):**
-- Login / auth / token storage
-- Realmlist writing, cache clearing, spawning `Wow.exe`
+**Out of scope (do not start without a session prompt):**
+- Login / auth / 2FA / token storage / session history
 - Characters, armory, Mythic+, raids, shop, guild, referrals, transmog, bug report
-- News feed, server status, 2FA, session history, dynamic backgrounds
-- Real CMS integration
-- Expansion picker UI beyond one hardcoded Cata card
+- News feed, server status widget, dynamic backgrounds
+- Real CMS integration — currently hits the local mock server
+- Auto-updater
 
 ## What to tackle next session
 
-Session 2 swaps the mock for a real patch host and implements realmlist writing, cache clearing, and `Wow.exe` launch — i.e., the first end-to-end "install → play" flow against your real server. Login / auth happens in Session 3.
+Session 3: login + auth + token storage (Windows Credential Manager via `keyring`), 2FA (TOTP), and the CMS-backed expansion config endpoint. That unblocks the character list / armory / shop stack.
 
 ## Dev notes
 

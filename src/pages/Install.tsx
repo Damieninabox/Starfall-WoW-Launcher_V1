@@ -8,6 +8,7 @@ import {
   patcherRun,
 } from "../api/patcher";
 import { useInstallerStore } from "../state/installer";
+import { useLauncherStore } from "../state/launcher";
 
 function formatBytes(n: number): string {
   if (n < 1024) return `${n} B`;
@@ -29,13 +30,11 @@ function formatEta(bytesRemaining: number, bytesPerSec: number): string {
 
 export default function Install() {
   const {
-    installDir,
     manifestUrl,
     phase,
     summary,
     progress,
     errorMessage,
-    setInstallDir,
     setManifestUrl,
     setPhase,
     setSummary,
@@ -43,6 +42,8 @@ export default function Install() {
     setError,
     reset,
   } = useInstallerStore();
+  const installDir = useLauncherStore((s) => s.installDir);
+  const setInstallDir = useLauncherStore((s) => s.setInstallDir);
 
   const unlistenRef = useRef<(() => void) | null>(null);
 
