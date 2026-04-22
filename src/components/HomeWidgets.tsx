@@ -63,6 +63,7 @@ export function ServerStatusCard() {
 
 export function NewsCard() {
   const [n, setN] = useState<NewsEntry[]>([]);
+  const [active, setActive] = useState<NewsEntry | null>(null);
   useEffect(() => {
     api.news().then((r) => setN(r.news)).catch(() => {});
   }, []);
@@ -71,18 +72,79 @@ export function NewsCard() {
       {n.length === 0 && <div className="text-sm text-neutral-500">No news.</div>}
       <ul className="flex flex-col gap-3">
         {n.slice(0, 4).map((item) => (
-          <li key={item.id} className="flex flex-col gap-1">
-            <div className="flex items-baseline justify-between gap-2">
-              <div className="text-sm font-medium">{item.title}</div>
-              <div className="whitespace-nowrap text-xs text-neutral-500">
-                {item.date}
+          <li key={item.id}>
+            <button
+              onClick={() => setActive(item)}
+              className="group flex w-full flex-col gap-1 text-left"
+            >
+              <div className="flex items-baseline justify-between gap-2">
+                <div className="flex items-baseline gap-2">
+                  {item.pinned && (
+                    <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] uppercase tracking-widest text-amber-300">
+                      Pinned
+                    </span>
+                  )}
+                  <div className="text-sm font-medium group-hover:text-violet-200">
+                    {item.title}
+                  </div>
+                </div>
+                <div className="whitespace-nowrap text-xs text-neutral-500">
+                  {item.date}
+                </div>
               </div>
-            </div>
-            <div className="text-xs text-neutral-400">{item.body}</div>
+              <div className="line-clamp-2 text-xs text-neutral-400">{item.body}</div>
+            </button>
           </li>
         ))}
       </ul>
+      {active && <NewsModal entry={active} onClose={() => setActive(null)} />}
     </SectionCard>
+  );
+}
+
+function NewsModal({ entry, onClose }: { entry: NewsEntry; onClose: () => void }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+  return (
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6 backdrop-blur-sm"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="max-h-[80vh] w-full max-w-2xl overflow-auto rounded-xl border border-violet-500/30 bg-neutral-950 p-6 shadow-2xl"
+      >
+        <header className="mb-3 flex items-start justify-between gap-4">
+          <div>
+            <div className="mb-1 flex items-center gap-2 text-xs uppercase tracking-widest text-violet-300">
+              {entry.tag}
+              {entry.author && <span className="text-neutral-500">· {entry.author}</span>}
+              <span className="text-neutral-500">· {entry.date}</span>
+            </div>
+            <h2 className="text-2xl font-semibold">{entry.title}</h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="rounded border border-neutral-800 px-2 py-1 text-xs text-neutral-400 hover:bg-neutral-800"
+          >
+            Close (Esc)
+          </button>
+        </header>
+        {entry.imageUrl && (
+          <img
+            src={entry.imageUrl}
+            alt={entry.title}
+            className="mb-4 w-full rounded border border-neutral-800 object-cover"
+          />
+        )}
+        <div className="whitespace-pre-wrap text-sm text-neutral-200">
+          {entry.body}
+        </div>
+      </div>
+    </div>
   );
 }
 

@@ -6,7 +6,8 @@ import Characters from "./pages/Characters";
 import MythicPlus from "./pages/MythicPlus";
 import Shop from "./pages/Shop";
 import Settings from "./pages/Settings";
-import Referral from "./pages/Referral";
+import Vote from "./pages/Vote";
+import Changelog from "./pages/Changelog";
 import Transmog from "./pages/Transmog";
 import Addons from "./pages/Addons";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -25,7 +26,8 @@ const navItems = [
 ];
 
 const secondary = [
-  { to: "/referral", label: "Refer" },
+  { to: "/vote", label: "Vote" },
+  { to: "/changelog", label: "Changelog" },
 ];
 
 function Shell({ children }: { children: React.ReactNode }) {
@@ -106,7 +108,8 @@ function AppRoutes() {
                 <Route path="/addons" element={<Addons />} />
                 <Route path="/install" element={<Install />} />
                 <Route path="/settings" element={<Settings />} />
-                <Route path="/referral" element={<Referral />} />
+                <Route path="/vote" element={<Vote />} />
+                <Route path="/changelog" element={<Changelog />} />
                 <Route path="*" element={<Navigate to="/home" replace />} />
               </Routes>
             </Shell>

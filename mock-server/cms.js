@@ -9,6 +9,7 @@ import {
   findAccountForLogin,
   charactersForAccount,
   guildByKey,
+  guildEvents,
   realmStatus,
   cmsNews,
   cmsRealms,
@@ -16,6 +17,15 @@ import {
   cmsChangelog,
   cmsVoteSites,
   cmsAccountPoints,
+  cmsRecordVote,
+  currentSeason,
+  mplusWeeklyAffixes,
+  mplusLeaderboard,
+  mplusCharacterRuns,
+  mplusWeeklyProgress,
+  mplusEnabledDungeons,
+  itemSearch,
+  itemById,
 } from "./db.js";
 
 // --- fixtures ---------------------------------------------------------------
@@ -369,6 +379,31 @@ export async function handleCms(req, res, url) {
     return sendJson(res, 200, { sites: rows ?? [] }) ?? true;
   }
 
+  const voteRecord = p.match(/^\/api\/vote\/(\d+)\/record$/);
+  if (req.method === "POST" && voteRecord) {
+    if (!bearerUser(req)) {
+      return sendJson(res, 401, { error: "not authenticated" }) ?? true;
+    }
+    const u = bearerUser(req);
+    if (!u?.accountId) {
+      return sendJson(res, 400, { error: "mock account cannot vote" }) ?? true;
+    }
+    const siteId = Number(voteRecord[1]);
+    const ip = req.socket?.remoteAddress ?? "";
+    const result = await cmsRecordVote(u.accountId, siteId, ip);
+    if (!result) return sendJson(res, 500, { error: "db error" }) ?? true;
+    return sendJson(res, 200, result) ?? true;
+  }
+
+  if (req.method === "GET" && p === "/api/account/points") {
+    if (!bearerUser(req)) {
+      return sendJson(res, 401, { error: "not authenticated" }) ?? true;
+    }
+    const u = bearerUser(req);
+    const pts = u?.accountId ? await cmsAccountPoints(u.accountId) : null;
+    return sendJson(res, 200, pts ?? { vote_points: 0, donation_points: 0, total_votes: 0 }) ?? true;
+  }
+
   if (req.method === "GET" && p === "/api/launcher/shop") {
     const shop = await cmsShopItems();
     return sendJson(res, 200, shop ?? { categories: [], items: [] }) ?? true;
@@ -493,18 +528,27 @@ export async function handleCms(req, res, url) {
     return sendJson(res, 200, { ok: true }) ?? true;
   }
 
-  // items
+  // items (world DB)
   if (req.method === "GET" && p === "/api/items/search") {
-    const q = (url.searchParams.get("q") ?? "").toLowerCase();
-    const hits = q
-      ? ITEM_DB.filter((it) => it.name.toLowerCase().includes(q))
-      : ITEM_DB;
+    const q = url.searchParams.get("q") ?? "";
+    const items = await itemSearch(q, 30);
+    if (items !== null) return sendJson(res, 200, { items }) ?? true;
+    const low = q.toLowerCase();
+    const hits = low ? ITEM_DB.filter((it) => it.name.toLowerCase().includes(low)) : ITEM_DB;
     return sendJson(res, 200, { items: hits }) ?? true;
   }
 
-  const itemSources = p.match(/^\/api\/items\/(\d+)\/sources$/);
-  if (req.method === "GET" && itemSources) {
-    const srcs = ITEM_SOURCES[itemSources[1]] ?? [];
+  const itemOne = p.match(/^\/api\/items\/(\d+)$/);
+  if (req.method === "GET" && itemOne) {
+    const id = Number(itemOne[1]);
+    const it = await itemById(id);
+    if (it) return sendJson(res, 200, it) ?? true;
+    return sendJson(res, 404, { error: "not found" }) ?? true;
+  }
+
+  const itemSourcesMatch = p.match(/^\/api\/items\/(\d+)\/sources$/);
+  if (req.method === "GET" && itemSourcesMatch) {
+    const srcs = ITEM_SOURCES[itemSourcesMatch[1]] ?? [];
     return sendJson(res, 200, { sources: srcs }) ?? true;
   }
 
@@ -540,32 +584,78 @@ export async function handleCms(req, res, url) {
     }) ?? true;
   }
 
-  const guildEvents = p.match(/^\/api\/guild\/([^/]+)\/events$/);
-  if (req.method === "GET" && guildEvents) {
-    const g = GUILDS[guildEvents[1]];
+  const guildEventsMatch = p.match(/^\/api\/guild\/([^/]+)\/events$/);
+  if (req.method === "GET" && guildEventsMatch) {
+    const key = guildEventsMatch[1];
+    const dbg = await guildByKey(key);
+    if (dbg) {
+      const events = await guildEvents(dbg.guildid);
+      return sendJson(res, 200, { events: events ?? [] }) ?? true;
+    }
+    const g = GUILDS[key];
     if (!g) return sendJson(res, 404, { error: "not found" });
     return sendJson(res, 200, { events: g.events }) ?? true;
   }
 
-  // m+
+  // m+ (Starfall custom system)
   if (req.method === "GET" && p === "/api/mplus/affixes/current") {
+    const live = await mplusWeeklyAffixes();
+    if (live) {
+      return sendJson(res, 200, {
+        week: `week-${live.weekSeed}`,
+        startTime: live.startTime,
+        endTime: live.endTime,
+        rotation: live.rotation.map((a) => ({
+          id: a.id,
+          name: a.name,
+          icon: `affix-${a.id}`,
+          description: "",
+        })),
+      }) ?? true;
+    }
     return sendJson(res, 200, AFFIXES) ?? true;
   }
+  if (req.method === "GET" && p === "/api/mplus/season") {
+    const s = await currentSeason();
+    if (!s) return sendJson(res, 200, { season: null }) ?? true;
+    return sendJson(res, 200, {
+      season: {
+        seasonId: Number(s.seasonId),
+        name: s.seasonName,
+        startDate: s.startDate,
+        endDate: s.endDate,
+      },
+    }) ?? true;
+  }
+  if (req.method === "GET" && p === "/api/mplus/dungeons") {
+    const d = await mplusEnabledDungeons();
+    return sendJson(res, 200, { dungeons: d ?? [] }) ?? true;
+  }
   if (req.method === "GET" && p === "/api/mplus/leaderboard") {
+    const season = await currentSeason();
+    if (season) {
+      const runs = await mplusLeaderboard(Number(season.seasonId), 100);
+      if (runs) return sendJson(res, 200, { runs }) ?? true;
+    }
     return sendJson(res, 200, { runs: MPLUS_LEADERBOARD }) ?? true;
   }
   const mplusChar = p.match(/^\/api\/mplus\/character\/(\d+)\/runs$/);
   if (req.method === "GET" && mplusChar) {
     const charId = Number(mplusChar[1]);
-    const ch = CHARACTERS.find((c) => c.id === charId);
-    if (!ch) return sendJson(res, 404, { error: "not found" });
-    return sendJson(res, 200, {
-      runs: MPLUS_LEADERBOARD.slice(0, 2).map((r) => ({
-        dungeon: r.dungeon,
-        timer: r.timer,
-        score: r.score,
-      })),
-    }) ?? true;
+    const season = await currentSeason();
+    if (season) {
+      const runs = await mplusCharacterRuns(charId, Number(season.seasonId));
+      if (runs !== null) return sendJson(res, 200, { runs }) ?? true;
+    }
+    return sendJson(res, 404, { error: "not found" }) ?? true;
+  }
+  const mplusWeekly = p.match(/^\/api\/mplus\/character\/(\d+)\/weekly$/);
+  if (req.method === "GET" && mplusWeekly) {
+    const charId = Number(mplusWeekly[1]);
+    const affixes = await mplusWeeklyAffixes();
+    const weekNumber = affixes ? affixes.weekSeed : 0;
+    const prog = await mplusWeeklyProgress(charId, weekNumber);
+    return sendJson(res, 200, prog ?? { runsCompleted: 0, highestKeyTimed: 0, cacheCollected: 0 }) ?? true;
   }
 
   // raids

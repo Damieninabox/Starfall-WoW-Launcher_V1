@@ -122,11 +122,46 @@ export interface AffixesResponse {
   rotation: Affix[];
 }
 export interface MplusRun {
-  rank: number;
-  party: string[];
+  guid: number;
+  name: string;
+  className: string;
+  race: string;
   dungeon: string;
-  timer: string;
+  mapId: number;
   score: number;
+  keyLevel: number;
+  timer: string;
+  inTime: boolean;
+}
+export interface MplusSeason {
+  seasonId: number;
+  name: string;
+  startDate: string;
+  endDate: string | null;
+}
+export interface MplusDungeon {
+  mapId: number;
+  name: string;
+  timeLimitSec: number;
+}
+export interface MplusCharRun {
+  dungeon: string;
+  mapId: number;
+  score: number;
+  keyLevel: number;
+  timer: string;
+  inTime: boolean;
+  updatedAt: string;
+}
+export interface MplusWeekly {
+  runsCompleted: number;
+  highestKeyTimed: number;
+  cacheCollected: number;
+}
+export interface AccountPoints {
+  vote_points: number;
+  donation_points: number;
+  total_votes: number;
 }
 export interface RaidProgress {
   raid: string;
@@ -233,9 +268,16 @@ export const api = {
     cmsGet<{ events: GuildEvent[] }>(`/api/guild/${guid}/events`),
   affixes: () => cmsGet<AffixesResponse>("/api/mplus/affixes/current"),
   mplusLeaderboard: () => cmsGet<{ runs: MplusRun[] }>("/api/mplus/leaderboard"),
+  mplusSeason: () => cmsGet<{ season: MplusSeason | null }>("/api/mplus/season"),
+  mplusDungeons: () => cmsGet<{ dungeons: MplusDungeon[] }>("/api/mplus/dungeons"),
   mplusCharacter: (id: number) =>
-    cmsGet<{ runs: { dungeon: string; timer: string; score: number }[] }>(
-      `/api/mplus/character/${id}/runs`,
+    cmsGet<{ runs: MplusCharRun[] }>(`/api/mplus/character/${id}/runs`),
+  mplusCharacterWeekly: (id: number) =>
+    cmsGet<MplusWeekly>(`/api/mplus/character/${id}/weekly`),
+  accountPoints: () => cmsGet<AccountPoints>("/api/account/points"),
+  vote: (siteId: number) =>
+    cmsPost<{ ok?: boolean; pointsAwarded?: number; error?: string; nextVoteMs?: number }>(
+      `/api/vote/${siteId}/record`,
     ),
   raids: () => cmsGet<{ raids: RaidProgress[] }>("/api/raids/progression"),
   addons: () => cmsGet<{ addons: Addon[] }>("/api/launcher/addons"),

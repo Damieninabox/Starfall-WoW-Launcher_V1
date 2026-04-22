@@ -348,6 +348,280 @@ export async function cmsAccountPoints(accountId) {
   }
 }
 
+// --- custom Mythic+ ------------------------------------------------------
+
+// Cata dungeon map id -> display name. Only the ones enabled in
+// mythic_dungeon_config will show up in the UI.
+const DUNGEON_NAMES = {
+  33: "Shadowfang Keep",
+  36: "Deadmines",
+  643: "Throne of the Tides",
+  644: "Halls of Origination",
+  645: "Blackrock Caverns",
+  657: "The Vortex Pinnacle",
+  725: "The Stonecore",
+  754: "Grim Batol",
+  755: "Lost City of the Tol'vir",
+  859: "Zul'Gurub",
+  938: "End Time",
+  939: "Well of Eternity",
+  940: "Hour of Twilight",
+  967: "Zul'Aman",
+};
+function dungeonName(id) {
+  return DUNGEON_NAMES[id] ?? `Map #${id}`;
+}
+function formatTimeMs(ms) {
+  const s = Math.floor(ms / 1000);
+  const m = Math.floor(s / 60);
+  const rest = s % 60;
+  return `${m}:${String(rest).padStart(2, "0")}`;
+}
+
+export async function currentSeason() {
+  if (!dbEnabled()) return null;
+  try {
+    const rows = await q(
+      `SELECT seasonId, seasonName, startDate, endDate, active
+       FROM \`${CONFIG.worldDb}\`.mythic_rating_seasons
+       WHERE active = 1 ORDER BY seasonId DESC LIMIT 1`,
+    );
+    return rows[0] ?? null;
+  } catch (e) { console.warn("[db] currentSeason:", e.message); return null; }
+}
+
+export async function mplusWeeklyAffixes() {
+  if (!dbEnabled()) return null;
+  try {
+    const rows = await q(
+      `SELECT weekSeed, startTime, endTime,
+              affix1Id, affix1Name, affix2Id, affix2Name, affix3Id, affix3Name
+       FROM \`${CONFIG.charsDb}\`.mythic_weekly_affixes
+       WHERE startTime <= NOW() AND endTime > NOW()
+       ORDER BY startTime DESC LIMIT 1`,
+    );
+    const row = rows[0];
+    if (!row) return null;
+    return {
+      weekSeed: Number(row.weekSeed),
+      startTime: row.startTime,
+      endTime: row.endTime,
+      rotation: [
+        { id: Number(row.affix1Id), name: row.affix1Name },
+        { id: Number(row.affix2Id), name: row.affix2Name },
+        { id: Number(row.affix3Id), name: row.affix3Name },
+      ].filter((a) => a.id > 0),
+    };
+  } catch (e) { console.warn("[db] mplusWeeklyAffixes:", e.message); return null; }
+}
+
+export async function mplusLeaderboard(seasonId, limit = 100) {
+  if (!dbEnabled()) return null;
+  try {
+    const rows = await q(
+      `SELECT r.characterGuid AS guid, r.mapId, r.bestScore, r.bestKeyLevel,
+              r.bestTimeMs, r.timeLimitMs, c.name, c.class, c.race
+       FROM \`${CONFIG.charsDb}\`.character_mythic_rating r
+       JOIN \`${CONFIG.charsDb}\`.characters c ON c.guid = r.characterGuid
+       WHERE r.seasonId = ?
+       ORDER BY r.bestScore DESC
+       LIMIT ?`,
+      [seasonId, limit],
+    );
+    return rows.map((r) => ({
+      guid: Number(r.guid),
+      name: r.name,
+      className: CLASS_NAMES[r.class] ?? `Class ${r.class}`,
+      race: RACE_NAMES[r.race] ?? `Race ${r.race}`,
+      dungeon: dungeonName(Number(r.mapId)),
+      mapId: Number(r.mapId),
+      score: Number(r.bestScore),
+      keyLevel: Number(r.bestKeyLevel),
+      timer: formatTimeMs(Number(r.bestTimeMs)),
+      inTime: Number(r.bestTimeMs) <= Number(r.timeLimitMs),
+    }));
+  } catch (e) { console.warn("[db] mplusLeaderboard:", e.message); return null; }
+}
+
+export async function mplusCharacterRuns(guid, seasonId) {
+  if (!dbEnabled()) return null;
+  try {
+    const rows = await q(
+      `SELECT mapId, bestScore, bestKeyLevel, bestTimeMs, timeLimitMs, updatedAt
+       FROM \`${CONFIG.charsDb}\`.character_mythic_rating
+       WHERE characterGuid = ? AND seasonId = ?
+       ORDER BY bestScore DESC`,
+      [guid, seasonId],
+    );
+    return rows.map((r) => ({
+      dungeon: dungeonName(Number(r.mapId)),
+      mapId: Number(r.mapId),
+      score: Number(r.bestScore),
+      keyLevel: Number(r.bestKeyLevel),
+      timer: formatTimeMs(Number(r.bestTimeMs)),
+      inTime: Number(r.bestTimeMs) <= Number(r.timeLimitMs),
+      updatedAt: r.updatedAt,
+    }));
+  } catch (e) { console.warn("[db] mplusCharacterRuns:", e.message); return null; }
+}
+
+export async function mplusWeeklyProgress(guid, weekNumber) {
+  if (!dbEnabled()) return null;
+  try {
+    const rows = await q(
+      `SELECT runsCompleted, highestKeyTimed, cacheCollected
+       FROM \`${CONFIG.charsDb}\`.character_mythic_weekly
+       WHERE characterGuid = ? AND weekNumber = ?`,
+      [guid, weekNumber],
+    );
+    return rows[0] ?? { runsCompleted: 0, highestKeyTimed: 0, cacheCollected: 0 };
+  } catch (e) { console.warn("[db] mplusWeeklyProgress:", e.message); return null; }
+}
+
+export async function mplusEnabledDungeons() {
+  if (!dbEnabled()) return null;
+  try {
+    const rows = await q(
+      `SELECT mapId, timeLimitSeconds FROM \`${CONFIG.worldDb}\`.mythic_dungeon_config WHERE enabled = 1`,
+    );
+    return rows.map((r) => ({
+      mapId: Number(r.mapId),
+      name: dungeonName(Number(r.mapId)),
+      timeLimitSec: Number(r.timeLimitSeconds),
+    }));
+  } catch (e) { console.warn("[db] mplusEnabledDungeons:", e.message); return null; }
+}
+
+// --- items (world DB) ----------------------------------------------------
+
+const INV_TYPE = {
+  0: "—", 1: "Head", 2: "Neck", 3: "Shoulder", 4: "Shirt", 5: "Chest",
+  6: "Waist", 7: "Legs", 8: "Feet", 9: "Wrist", 10: "Hands",
+  11: "Finger", 12: "Trinket", 13: "1H Weapon", 14: "Shield", 15: "Ranged",
+  16: "Cloak", 17: "2H Weapon", 18: "Bag", 19: "Tabard", 20: "Chest",
+  21: "Main Hand", 22: "Off Hand", 23: "Held", 24: "Ammo", 25: "Thrown",
+  26: "Ranged", 27: "Quiver", 28: "Relic",
+};
+
+export async function itemSearch(queryStr, limit = 30) {
+  if (!dbEnabled()) return null;
+  const needle = String(queryStr ?? "").trim();
+  if (needle.length < 2) return [];
+  try {
+    const [rows] = await pool.query(
+      `SELECT entry AS id, name, Quality AS quality, ItemLevel AS ilvl,
+              InventoryType AS invType
+       FROM \`${CONFIG.worldDb}\`.item_template
+       WHERE Quality >= 2 AND name LIKE ?
+       ORDER BY ItemLevel DESC, name ASC
+       LIMIT ?`,
+      [`%${needle}%`, limit],
+    );
+    return rows.map((r) => ({
+      id: Number(r.id),
+      name: r.name,
+      icon: `item-${r.id}`,
+      quality: Number(r.quality),
+      ilvl: Number(r.ilvl),
+      type: INV_TYPE[Number(r.invType)] ?? "—",
+      setId: null,
+    }));
+  } catch (e) { console.warn("[db] itemSearch:", e.message); return null; }
+}
+
+export async function itemById(id) {
+  if (!dbEnabled()) return null;
+  try {
+    const rows = await q(
+      `SELECT entry AS id, name, Quality AS quality, ItemLevel AS ilvl, InventoryType AS invType
+       FROM \`${CONFIG.worldDb}\`.item_template WHERE entry = ? LIMIT 1`,
+      [id],
+    );
+    const r = rows[0];
+    if (!r) return null;
+    return {
+      id: Number(r.id),
+      name: r.name,
+      icon: `item-${r.id}`,
+      quality: Number(r.quality),
+      ilvl: Number(r.ilvl),
+      type: INV_TYPE[Number(r.invType)] ?? "—",
+      setId: null,
+    };
+  } catch (e) { console.warn("[db] itemById:", e.message); return null; }
+}
+
+// --- votes / points ------------------------------------------------------
+
+export async function cmsVoteSitesAll() {
+  return cmsVoteSites();
+}
+
+export async function cmsRecordVote(accountId, siteId, ip) {
+  if (!dbEnabled() || !accountId) return null;
+  try {
+    const [site] = await pool.query(
+      `SELECT id, points_reward, cooldown_hours FROM \`${CONFIG.cmsDb}\`.vote_sites WHERE id = ? AND is_active = 1 LIMIT 1`,
+      [siteId],
+    );
+    const s = site[0];
+    if (!s) return { error: "site not found" };
+    // Cooldown check: last vote for this account+site
+    const [last] = await pool.query(
+      `SELECT voted_at FROM \`${CONFIG.cmsDb}\`.vote_log
+       WHERE account_id = ? AND site_id = ?
+       ORDER BY voted_at DESC LIMIT 1`,
+      [accountId, siteId],
+    );
+    if (last[0]) {
+      const since = Date.now() - new Date(last[0].voted_at).getTime();
+      const cooldownMs = Number(s.cooldown_hours) * 3600 * 1000;
+      if (since < cooldownMs) {
+        return { error: "cooldown", nextVoteMs: cooldownMs - since };
+      }
+    }
+    await pool.query(
+      `INSERT INTO \`${CONFIG.cmsDb}\`.vote_log (account_id, site_id, points_awarded, ip_address, voted_at)
+       VALUES (?, ?, ?, ?, NOW())`,
+      [accountId, siteId, s.points_reward, ip ?? ""],
+    );
+    await pool.query(
+      `INSERT INTO \`${CONFIG.cmsDb}\`.account_points (account_id, vote_points, donation_points, total_votes, total_donated_usd, updated_at)
+       VALUES (?, ?, 0, 1, 0, NOW())
+       ON DUPLICATE KEY UPDATE vote_points = vote_points + VALUES(vote_points),
+                               total_votes = total_votes + 1,
+                               updated_at = NOW()`,
+      [accountId, s.points_reward],
+    );
+    return { ok: true, pointsAwarded: Number(s.points_reward) };
+  } catch (e) { console.warn("[db] cmsRecordVote:", e.message); return null; }
+}
+
+// --- guild events --------------------------------------------------------
+
+export async function guildEvents(guildId) {
+  if (!dbEnabled()) return null;
+  try {
+    // calendar_events creator is a character GUID; join to guild_member for the creator's guild.
+    const rows = await q(
+      `SELECT DISTINCT ce.id, ce.title, ce.description, ce.type, ce.dungeon, ce.eventtime
+       FROM \`${CONFIG.charsDb}\`.calendar_events ce
+       JOIN \`${CONFIG.charsDb}\`.guild_member gm ON gm.guid = ce.creator
+       WHERE gm.guildid = ? AND ce.eventtime > UNIX_TIMESTAMP()
+       ORDER BY ce.eventtime ASC
+       LIMIT 20`,
+      [guildId],
+    );
+    return rows.map((r) => ({
+      id: String(r.id),
+      title: r.title ?? "(untitled)",
+      description: r.description ?? "",
+      kind: Number(r.type) === 4 ? "raid" : "social",
+      when: new Date(Number(r.eventtime) * 1000).toISOString(),
+    }));
+  } catch (e) { console.warn("[db] guildEvents:", e.message); return null; }
+}
+
 export async function shutdownDb() {
   if (pool) {
     await pool.end();
