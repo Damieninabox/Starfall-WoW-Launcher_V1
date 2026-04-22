@@ -1,0 +1,32 @@
+[package]
+name = "starfall-launcher"
+version = "0.1.0"
+description = "Starfall WoW Launcher"
+authors = ["Starfall"]
+edition = "2021"
+
+[lib]
+name = "starfall_launcher_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.12", default-features = false, features = ["stream", "rustls-tls", "http2"] }
+sha2 = "0.10"
+walkdir = "2"
+thiserror = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+futures-util = "0.3"
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
