@@ -33,7 +33,7 @@ function Shell({ children }: { children: React.ReactNode }) {
   const displayName = useAuthStore((s) => s.displayName);
   return (
     <div className="flex h-full flex-col">
-      <header className="flex flex-wrap items-center gap-4 border-b border-neutral-800 bg-neutral-950 px-6 py-3">
+      <header className="flex flex-wrap items-center gap-4 border-b border-neutral-800 bg-neutral-950/85 px-6 py-3 backdrop-blur">
         <div className="text-lg font-semibold tracking-wide text-amber-400">
           Starfall
         </div>

@@ -11,6 +11,12 @@ html, body, #root {
 body {
   margin: 0;
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-  background: #0b0d12;
+  background-color: #0b0d12;
+  background-image:
+    linear-gradient(180deg, rgba(11, 13, 18, 0.65) 0%, rgba(11, 13, 18, 0.92) 100%),
+    url("/backgr.jpg");
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
   color: #e6e6e6;
 }
