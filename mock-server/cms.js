@@ -6,9 +6,16 @@
 import crypto from "node:crypto";
 import {
   dbEnabled,
-  findAccountByUsername,
+  findAccountForLogin,
   charactersForAccount,
   guildByKey,
+  realmStatus,
+  cmsNews,
+  cmsRealms,
+  cmsShopItems,
+  cmsChangelog,
+  cmsVoteSites,
+  cmsAccountPoints,
 } from "./db.js";
 
 // --- fixtures ---------------------------------------------------------------
@@ -164,7 +171,14 @@ function bearerUser(req) {
   const token = auth.slice("Bearer ".length);
   const s = sessions.get(token);
   if (!s) return null;
-  return { ...USER, username: s.username, accountId: s.accountId ?? null };
+  return {
+    ...USER,
+    username: s.username,
+    displayName: s.displayName ?? s.username,
+    email: s.email ?? USER.email,
+    accountId: s.accountId ?? null,
+    id: s.accountId ? `acct-${s.accountId}` : USER.id,
+  };
 }
 
 function readBody(req) {
@@ -223,20 +237,24 @@ export async function handleCms(req, res, url) {
   // -- public
   if (req.method === "POST" && p === "/api/launcher/login") {
     const body = await readBody(req);
-    // Real DB: accept any account that exists (password is SRP6-hashed, can't
-    // verify here without a server handshake). Dev mock: starfall/starfall.
     let user = null;
     if (dbEnabled() && body.username) {
-      const acct = await findAccountByUsername(String(body.username).toUpperCase());
-      if (acct) {
+      const result = await findAccountForLogin(body.username, body.password ?? "");
+      if (result?.account) {
+        const a = result.account;
         user = {
           ...USER,
-          username: acct.username,
-          displayName: acct.username,
-          email: acct.email ?? USER.email,
-          accountId: acct.id,
+          id: `acct-${a.id}`,
+          username: a.username,
+          displayName: a.username,
+          email: a.email ?? USER.email,
+          accountId: a.id,
         };
+      } else if (result?.notFound || result?.badPassword) {
+        sendJson(res, 401, { error: "invalid credentials" });
+        return true;
       }
+      // result === null means DB query failed; fall through to mock path
     }
     if (!user) {
       if (body.username !== USER.username || body.password !== USER.password) {
@@ -251,9 +269,14 @@ export async function handleCms(req, res, url) {
       sendJson(res, 200, { requires2fa: true, pendingToken: pending });
       return true;
     }
-    // cache the user under the session so follow-up auth'd calls resolve it
     const { token, refreshToken } = issueLogin(user, req);
-    sessions.set(token, { username: user.username, accountId: user.accountId, issuedAt: Date.now() });
+    sessions.set(token, {
+      username: user.username,
+      accountId: user.accountId,
+      displayName: user.displayName,
+      email: user.email,
+      issuedAt: Date.now(),
+    });
     sendJson(res, 200, { token, refreshToken });
     return true;
   }
@@ -282,34 +305,73 @@ export async function handleCms(req, res, url) {
   }
 
   if (req.method === "GET" && p === "/api/launcher/expansions") {
+    const realms = await cmsRealms();
+    if (realms && realms.length > 0) {
+      const expansions = realms.map((r) => ({
+        id: r.id,
+        name: r.expansion,
+        version: r.version,
+        tagline: `${r.realmType} · ${r.xpRate}`,
+        enabled: r.enabled,
+        realmId: r.realmId,
+        realmlist: r.realmlist,
+        realmName: r.name,
+        executable: "Wow.exe",
+        executable64: "Wow-64.exe",
+        manifestUrl: `http://${req.headers.host}/manifests/cata.json`,
+      }));
+      return sendJson(res, 200, { expansions }) ?? true;
+    }
     return sendJson(res, 200, {
       expansions: [
-        { id: "classic", name: "Classic", version: "1.12.1", enabled: false },
-        { id: "tbc", name: "The Burning Crusade", version: "2.4.3", enabled: false },
-        { id: "wotlk", name: "Wrath of the Lich King", version: "3.3.5a", enabled: false },
         {
           id: "cata",
           name: "Cataclysm",
           version: "4.3.4",
+          tagline: "Deathwing's shattered world",
           enabled: true,
-          executable: "Wow.exe",
-          executable64: "Wow-64.exe",
-          realmlistPath: "Data/{locale}/realmlist.wtf",
-          configPath: "WTF/Config.wtf",
-          cachePaths: ["Cache", "WDB"],
           manifestUrl: `http://${req.headers.host}/manifests/cata.json`,
         },
-        { id: "mop", name: "Mists of Pandaria", version: "5.4.8", enabled: false },
       ],
     }) ?? true;
   }
 
   if (req.method === "GET" && p === "/api/launcher/news") {
+    const dbNews = await cmsNews(10);
+    if (dbNews && dbNews.length > 0) return sendJson(res, 200, { news: dbNews }) ?? true;
     return sendJson(res, 200, { news: NEWS }) ?? true;
   }
 
   if (req.method === "GET" && p === "/api/launcher/server-status") {
+    const live = await realmStatus();
+    if (live) {
+      return sendJson(res, 200, {
+        online: live.online,
+        population: live.population,
+        uptimeHours: null,
+        realm: live.realm,
+        tps: null,
+        address: live.address,
+        port: live.port,
+        gamebuild: live.gamebuild,
+      }) ?? true;
+    }
     return sendJson(res, 200, SERVER_STATUS) ?? true;
+  }
+
+  if (req.method === "GET" && p === "/api/launcher/changelog") {
+    const rows = await cmsChangelog(10);
+    return sendJson(res, 200, { changelog: rows ?? [] }) ?? true;
+  }
+
+  if (req.method === "GET" && p === "/api/launcher/vote-sites") {
+    const rows = await cmsVoteSites();
+    return sendJson(res, 200, { sites: rows ?? [] }) ?? true;
+  }
+
+  if (req.method === "GET" && p === "/api/launcher/shop") {
+    const shop = await cmsShopItems();
+    return sendJson(res, 200, shop ?? { categories: [], items: [] }) ?? true;
   }
 
   if (req.method === "GET" && p === "/api/launcher/version") {

@@ -8,7 +8,6 @@ import Shop from "./pages/Shop";
 import Settings from "./pages/Settings";
 import Referral from "./pages/Referral";
 import Transmog from "./pages/Transmog";
-import BugReport from "./pages/BugReport";
 import Addons from "./pages/Addons";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Starfield from "./components/Starfield";
@@ -27,7 +26,6 @@ const navItems = [
 
 const secondary = [
   { to: "/referral", label: "Refer" },
-  { to: "/bug-report", label: "Bug" },
 ];
 
 function Shell({ children }: { children: React.ReactNode }) {
@@ -35,13 +33,20 @@ function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-full flex-col">
       <header className="flex flex-wrap items-center gap-4 border-b border-violet-500/20 bg-[#0c0f1f]/75 px-6 py-3 backdrop-blur">
-        <div className="flex items-baseline gap-2">
-          <span className="text-lg font-semibold tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-cyan-200 to-violet-400">
-            Starfall
-          </span>
-          <span className="text-[10px] uppercase tracking-[0.3em] text-violet-300/60">
-            Cataclysm
-          </span>
+        <div className="flex items-center gap-3">
+          <img
+            src="/logo.png"
+            alt="Starfall"
+            className="h-8 w-8 rounded-full object-contain drop-shadow-[0_0_10px_rgba(124,58,237,0.4)]"
+          />
+          <div className="flex flex-col leading-tight">
+            <span className="text-lg font-semibold tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-cyan-200 to-violet-400">
+              Starfall
+            </span>
+            <span className="text-[9px] uppercase tracking-[0.3em] text-violet-300/60">
+              Cataclysm
+            </span>
+          </div>
         </div>
         <nav className="flex gap-1">
           {navItems.map((item) => (
@@ -112,7 +117,6 @@ function AppRoutes() {
                 <Route path="/install" element={<Install />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/referral" element={<Referral />} />
-                <Route path="/bug-report" element={<BugReport />} />
                 <Route path="*" element={<Navigate to="/home" replace />} />
               </Routes>
             </Shell>

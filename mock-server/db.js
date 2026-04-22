@@ -4,6 +4,7 @@
 // while still showing real characters/guilds when one is running.
 
 import mysql from "mysql2/promise";
+import { verifyPassword } from "./srp6.js";
 
 const CONFIG = {
   host: process.env.MYSQL_HOST ?? "localhost",
@@ -13,6 +14,7 @@ const CONFIG = {
   authDb: process.env.MYSQL_AUTH_DB ?? "cata_auth",
   charsDb: process.env.MYSQL_CHARS_DB ?? "cata_chars",
   worldDb: process.env.MYSQL_WORLD_DB ?? "cata_herbs_ores",
+  cmsDb: process.env.MYSQL_CMS_DB ?? "starfall_cms",
   enabled: process.env.MYSQL_DISABLE !== "1",
 };
 
@@ -73,16 +75,23 @@ const CLASS_NAMES = {
   6: "Death Knight", 7: "Shaman", 8: "Mage", 9: "Warlock", 11: "Druid",
 };
 
-export async function findAccountByUsername(username) {
+export async function findAccountForLogin(username, password) {
   if (!dbEnabled()) return null;
   try {
     const rows = await q(
-      `SELECT id, username, email FROM \`${CONFIG.authDb}\`.account WHERE username = ? LIMIT 1`,
+      `SELECT id, username, salt, verifier, email
+       FROM \`${CONFIG.authDb}\`.account
+       WHERE UPPER(username) = UPPER(?) LIMIT 1`,
       [username],
     );
-    return rows[0] ?? null;
+    const acct = rows[0];
+    if (!acct) return { notFound: true };
+    if (!verifyPassword(acct.username, password, acct.salt, acct.verifier)) {
+      return { badPassword: true };
+    }
+    return { account: { id: acct.id, username: acct.username, email: acct.email } };
   } catch (e) {
-    console.warn("[db] findAccountByUsername failed:", e.message);
+    console.warn("[db] findAccountForLogin:", e.message);
     return null;
   }
 }
@@ -145,6 +154,189 @@ export async function guildByKey(key) {
     };
   } catch (e) {
     console.warn("[db] guildByKey failed:", e.message);
+    return null;
+  }
+}
+
+// --- live-server queries -------------------------------------------------
+
+export async function realmStatus() {
+  if (!dbEnabled()) return null;
+  try {
+    const [realms] = await pool.query(
+      `SELECT id, name, address, port, population, gamebuild FROM \`${CONFIG.authDb}\`.realmlist ORDER BY id LIMIT 1`,
+    );
+    const realm = realms[0];
+    if (!realm) return null;
+    const [[{ n: online }]] = await pool.query(
+      `SELECT COUNT(*) AS n FROM \`${CONFIG.charsDb}\`.characters WHERE online = 1`,
+    );
+    return {
+      online: true, // auth DB doesn't expose worldserver heartbeat; default true when reachable
+      population: Number(online),
+      realm: realm.name,
+      address: realm.address,
+      port: Number(realm.port),
+      gamebuild: Number(realm.gamebuild),
+      popWeight: Number(realm.population),
+    };
+  } catch (e) {
+    console.warn("[db] realmStatus:", e.message);
+    return null;
+  }
+}
+
+// --- CMS queries ---------------------------------------------------------
+
+export async function cmsNews(limit = 10) {
+  if (!dbEnabled()) return null;
+  try {
+    const rows = await q(
+      `SELECT id, title, excerpt, content, category, image_url, author_name, is_pinned, published_at
+       FROM \`${CONFIG.cmsDb}\`.news
+       WHERE is_published = 1
+       ORDER BY is_pinned DESC, published_at DESC
+       LIMIT ?`,
+      [limit],
+    );
+    return rows.map((r) => ({
+      id: String(r.id),
+      title: r.title,
+      body: r.excerpt || String(r.content ?? "").slice(0, 400),
+      date: String(r.published_at ?? "").slice(0, 10),
+      tag: r.category,
+      author: r.author_name,
+      pinned: !!r.is_pinned,
+      imageUrl: r.image_url,
+    }));
+  } catch (e) {
+    console.warn("[db] cmsNews:", e.message);
+    return null;
+  }
+}
+
+export async function cmsRealms() {
+  if (!dbEnabled()) return null;
+  try {
+    const rows = await q(
+      `SELECT id, realm_id, display_name, realmlist, build_info, xp_rate, realm_type, expansion, is_default, sort_order
+       FROM \`${CONFIG.cmsDb}\`.realm_config
+       WHERE is_active = 1
+       ORDER BY sort_order, id`,
+    );
+    return rows.map((r) => ({
+      id: r.expansion.toLowerCase().replace(/\s+/g, "-"),
+      realmId: Number(r.realm_id),
+      name: r.display_name,
+      expansion: r.expansion,
+      version: r.build_info,
+      xpRate: r.xp_rate,
+      realmType: r.realm_type,
+      realmlist: r.realmlist,
+      isDefault: !!r.is_default,
+      enabled: true,
+    }));
+  } catch (e) {
+    console.warn("[db] cmsRealms:", e.message);
+    return null;
+  }
+}
+
+export async function cmsShopItems() {
+  if (!dbEnabled()) return null;
+  try {
+    const cats = await q(
+      `SELECT id, name, slug, icon, sort_order FROM \`${CONFIG.cmsDb}\`.shop_categories WHERE is_active = 1 ORDER BY sort_order, id`,
+    );
+    const items = await q(
+      `SELECT id, category_id, name, description, image_url, item_entry, price_vp, price_dp, sort_order
+       FROM \`${CONFIG.cmsDb}\`.shop_items
+       WHERE is_active = 1
+       ORDER BY sort_order, id`,
+    );
+    return {
+      categories: cats.map((c) => ({
+        id: Number(c.id),
+        name: c.name,
+        slug: c.slug,
+        icon: c.icon,
+      })),
+      items: items.map((i) => ({
+        id: Number(i.id),
+        categoryId: Number(i.category_id),
+        name: i.name,
+        description: i.description,
+        imageUrl: i.image_url,
+        itemEntry: i.item_entry ? Number(i.item_entry) : null,
+        priceVp: Number(i.price_vp),
+        priceDp: Number(i.price_dp),
+      })),
+    };
+  } catch (e) {
+    console.warn("[db] cmsShopItems:", e.message);
+    return null;
+  }
+}
+
+export async function cmsChangelog(limit = 10) {
+  if (!dbEnabled()) return null;
+  try {
+    const rows = await q(
+      `SELECT id, version, title, content, category, author_name, published_at
+       FROM \`${CONFIG.cmsDb}\`.changelog
+       WHERE is_published = 1
+       ORDER BY published_at DESC
+       LIMIT ?`,
+      [limit],
+    );
+    return rows.map((r) => ({
+      id: Number(r.id),
+      version: r.version,
+      title: r.title,
+      content: r.content,
+      category: r.category,
+      author: r.author_name,
+      date: String(r.published_at ?? "").slice(0, 10),
+    }));
+  } catch (e) {
+    console.warn("[db] cmsChangelog:", e.message);
+    return null;
+  }
+}
+
+export async function cmsVoteSites() {
+  if (!dbEnabled()) return null;
+  try {
+    const rows = await q(
+      `SELECT id, name, url, points_reward, cooldown_hours, image_url
+       FROM \`${CONFIG.cmsDb}\`.vote_sites
+       WHERE is_active = 1
+       ORDER BY sort_order, id`,
+    );
+    return rows.map((r) => ({
+      id: Number(r.id),
+      name: r.name,
+      url: r.url,
+      pointsReward: Number(r.points_reward),
+      cooldownHours: Number(r.cooldown_hours),
+      imageUrl: r.image_url,
+    }));
+  } catch (e) {
+    console.warn("[db] cmsVoteSites:", e.message);
+    return null;
+  }
+}
+
+export async function cmsAccountPoints(accountId) {
+  if (!dbEnabled() || !accountId) return null;
+  try {
+    const rows = await q(
+      `SELECT * FROM \`${CONFIG.cmsDb}\`.account_points WHERE account_id = ? LIMIT 1`,
+      [accountId],
+    );
+    return rows[0] ?? { vote_points: 0, donation_points: 0 };
+  } catch (e) {
+    console.warn("[db] cmsAccountPoints:", e.message);
     return null;
   }
 }

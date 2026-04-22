@@ -33,13 +33,65 @@ export interface NewsEntry {
   body: string;
   date: string;
   tag: string;
+  author?: string;
+  pinned?: boolean;
+  imageUrl?: string | null;
 }
 export interface ServerStatus {
   online: boolean;
   population: number;
-  uptimeHours: number;
+  uptimeHours: number | null;
   realm: string;
-  tps: number;
+  tps: number | null;
+  address?: string;
+  port?: number;
+  gamebuild?: number;
+}
+export interface ExpansionApi {
+  id: string;
+  name: string;
+  version: string;
+  tagline?: string;
+  enabled: boolean;
+  realmId?: number;
+  realmlist?: string;
+  realmName?: string;
+  manifestUrl?: string;
+  executable?: string;
+  executable64?: string;
+}
+export interface ShopItem {
+  id: number;
+  categoryId: number;
+  name: string;
+  description: string;
+  imageUrl: string | null;
+  itemEntry: number | null;
+  priceVp: number;
+  priceDp: number;
+}
+export interface ShopCategory {
+  id: number;
+  name: string;
+  slug: string;
+  icon: string | null;
+}
+export interface ChangelogEntry {
+  id: number;
+  version: string;
+  title: string;
+  content: string;
+  category: string;
+  author: string | null;
+  date: string;
+}
+export interface VoteSite {
+  id: number;
+  name: string;
+  url: string;
+  pointsReward: number;
+  cooldownHours: number;
+  imageUrl: string | null;
 }
 export interface Character {
   id: number;
@@ -152,7 +204,10 @@ export interface ShopSso {
 export const api = {
   news: () => cmsGet<{ news: NewsEntry[] }>("/api/launcher/news"),
   serverStatus: () => cmsGet<ServerStatus>("/api/launcher/server-status"),
-  expansions: () => cmsGet<{ expansions: unknown[] }>("/api/launcher/expansions"),
+  expansions: () => cmsGet<{ expansions: ExpansionApi[] }>("/api/launcher/expansions"),
+  changelog: () => cmsGet<{ changelog: ChangelogEntry[] }>("/api/launcher/changelog"),
+  voteSites: () => cmsGet<{ sites: VoteSite[] }>("/api/launcher/vote-sites"),
+  shop: () => cmsGet<{ categories: ShopCategory[]; items: ShopItem[] }>("/api/launcher/shop"),
   me: () => cmsGet<Me>("/api/account/me"),
   sessions: () => cmsGet<{ sessions: SessionEntry[] }>("/api/account/sessions"),
   revokeAll: () => cmsPost<{ ok: true }>("/api/account/sessions/revoke-all"),

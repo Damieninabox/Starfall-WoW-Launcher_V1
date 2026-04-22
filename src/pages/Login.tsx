@@ -70,8 +70,15 @@ export default function Login() {
 
   return (
     <div className="mx-auto flex max-w-md flex-col gap-6 pt-12">
-      <div className="flex flex-col items-center gap-2 text-center">
-        <div className="text-4xl font-bold tracking-tight text-violet-300">Starfall</div>
+      <div className="flex flex-col items-center gap-3 text-center">
+        <img
+          src="/logo.png"
+          alt="Starfall"
+          className="h-20 w-20 rounded-full object-contain drop-shadow-[0_0_25px_rgba(124,58,237,0.45)]"
+        />
+        <div className="text-4xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-cyan-200 to-violet-400">
+          Starfall
+        </div>
         <div className="text-sm text-neutral-400">Sign in to continue</div>
       </div>
 
@@ -105,7 +112,7 @@ export default function Login() {
             {busy ? "Signing in…" : "Sign in"}
           </button>
           <div className="text-center text-xs text-neutral-500">
-            Mock account: <span className="font-mono">starfall / starfall</span>
+            Use any account from <span className="font-mono">cata_auth</span>.
           </div>
         </form>
       )}
