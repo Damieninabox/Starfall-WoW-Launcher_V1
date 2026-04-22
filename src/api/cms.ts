@@ -99,9 +99,15 @@ export interface Character {
   realm: string;
   className: string;
   race: string;
+  gender?: "Male" | "Female";
   faction: "Alliance" | "Horde";
   level: number;
-  itemLevel: number;
+  money?: number;
+  honorPoints?: number;
+  totalKills?: number;
+  zoneId?: number;
+  totalPlayedSec?: number;
+  online?: boolean;
   guild: string | null;
   lastPlayed: string;
 }

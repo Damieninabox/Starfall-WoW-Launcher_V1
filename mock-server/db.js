@@ -100,7 +100,8 @@ export async function charactersForAccount(accountId) {
   if (!dbEnabled()) return null;
   try {
     const rows = await q(
-      `SELECT c.guid AS id, c.name, c.race, c.class, c.level, c.totalHonorPoints,
+      `SELECT c.guid AS id, c.name, c.race, c.class, c.gender, c.level, c.money,
+              c.totalHonorPoints, c.totalKills, c.zone, c.totaltime, c.online,
               c.logout_time, g.name AS guild
        FROM \`${CONFIG.charsDb}\`.characters c
        LEFT JOIN \`${CONFIG.charsDb}\`.guild_member gm ON gm.guid = c.guid
@@ -116,9 +117,15 @@ export async function charactersForAccount(accountId) {
       realm: "Starfall",
       className: CLASS_NAMES[r.class] ?? `Class ${r.class}`,
       race: RACE_NAMES[r.race] ?? `Race ${r.race}`,
+      gender: Number(r.gender) === 1 ? "Female" : "Male",
       faction: FACTION_BY_RACE[r.race] ?? "Alliance",
       level: Number(r.level),
-      itemLevel: Math.max(1, Math.floor(Number(r.level) * 4.7)), // rough estimate; real iLvl needs item_instance scan
+      money: Number(r.money),
+      honorPoints: Number(r.totalHonorPoints ?? 0),
+      totalKills: Number(r.totalKills ?? 0),
+      zoneId: Number(r.zone ?? 0),
+      totalPlayedSec: Number(r.totaltime ?? 0),
+      online: Number(r.online) === 1,
       guild: r.guild,
       lastPlayed: r.logout_time
         ? new Date(r.logout_time * 1000).toISOString()

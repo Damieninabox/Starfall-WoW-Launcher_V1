@@ -233,7 +233,7 @@ export default function Home() {
             <button
               onClick={handlePlay}
               disabled={running}
-              className="w-full rounded-lg bg-violet-500 px-6 py-4 text-lg font-semibold text-neutral-950 transition-colors hover:bg-violet-400 disabled:cursor-not-allowed disabled:opacity-50"
+              className="self-start rounded-md bg-violet-500 px-10 py-2.5 text-base font-semibold text-neutral-950 transition-colors hover:bg-violet-400 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {running ? message : "Play"}
             </button>
