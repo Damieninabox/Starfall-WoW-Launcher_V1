@@ -4,6 +4,7 @@ import fsp from "node:fs/promises";
 import crypto from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { handleCms } from "./cms.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const FILES_DIR = path.join(__dirname, "files");
@@ -172,6 +173,14 @@ async function main() {
         manifest = await buildManifest();
         sendJson(res, 200, { ok: true, version: manifest.version });
         return;
+      }
+      if (
+        url.pathname.startsWith("/api/") ||
+        url.pathname === "/shop" ||
+        url.pathname.startsWith("/armory/")
+      ) {
+        const handled = await handleCms(req, res, url);
+        if (handled) return;
       }
       res.writeHead(404, { "content-type": "text/plain" });
       res.end("not found");

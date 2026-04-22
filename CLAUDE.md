@@ -55,29 +55,53 @@ starfall-wow-launcher/
 6. **Atomic writes** — download to `<path>.partial`, rename on verified hash.
 7. **Install location default:** `%LOCALAPPDATA%/Starfall/` (no admin required); user-overridable.
 
-## Current scope (Sessions 1 + 2)
+## Current scope
 
-**Shipped:**
+**Phase 1 (Playable):**
 - Patcher core: check/run/repair with resume, hash cache, atomic replace, parallel downloads, cancel
 - Install page: folder picker, Check / Start / Pause / Repair, live progress
-- Mock manifest server (`mock-server/`) on `:8787` for dev
-- Realmlist read/write — UTF-8 no BOM, LF endings, writes to every `Data/<locale>/` folder
-- Cache clear — wipes `Cache/` + `WDB/` contents through `fs_safety`; never touches `WTF/`
-- Launch — spawns `Wow-64.exe` (falls back to `Wow.exe`), no shell
-- Home page: expansion picker (Cata active, 4 placeholders) + end-to-end **Play** flow: check → patch → sync realmlist → clear cache (per policy) → launch
-- Settings page: install dir, realmlist server, cache policy (on-launch / weekly / manual / off), launch args
-- Persistent launcher settings in `localStorage` via Zustand `persist`
+- Mock server (`mock-server/`) on `:8787` — `/manifests/cata.json`, `/files/*` with Range, plus the entire `/api/*` CMS surface for dev
+- Realmlist read/write (UTF-8 no BOM, LF, all locales)
+- Cache clear (Cache/ + WDB/ only; through `fs_safety`)
+- Launch (Wow-64.exe / Wow.exe; no shell)
+- Home Play flow: check → patch → sync realmlist → clear cache → launch
+- Settings: install dir, realmlist, cache policy, launch args (persisted to localStorage)
 
-**Out of scope (do not start without a session prompt):**
-- Login / auth / 2FA / token storage / session history
-- Characters, armory, Mythic+, raids, shop, guild, referrals, transmog, bug report
-- News feed, server status widget, dynamic backgrounds
-- Real CMS integration — currently hits the local mock server
-- Auto-updater
+**Phase 2 (Account features):**
+- Auth: login + 2FA + refresh + logout via `keyring` (Windows Credential Manager) — frontend never sees tokens
+- `cms_fetch` Tauri command proxies authenticated requests so JS can stay token-free
+- Login page (with 2FA second screen) + protected route guard + `/login` redirect on missing token
+- Characters page: list grouped by realm, sorted by last-played, embedded armory iframe
+- Mythic+ page (tabs): current affixes, leaderboard, raid progression with first-kill credit
+- Shop iframe with SSO token
+- Settings: 2FA enroll/disable (otpauth URL + backup codes), session history, revoke-all
+- Settings: WTF backup → zip / restore from zip (Rust `zip` crate, `fs_safety`-gated)
+- Home widgets: server status (auto-refresh 30s), news, M+ affixes, two guild MOTD/event cards
+- Dynamic background gradient on home per selected expansion
 
-## What to tackle next session
+**Phase 3 (Engagement):**
+- Refer a Friend page (link, code, signups, active, rewards earned/pending)
+- Transmog wishlist (search items, add/remove, "Where?" reveals item sources)
+- Bug Report form (title/category/description, auto-attaches launcher version + UA)
+- Addons page (server-shipped addon list with on/off toggle persisted locally)
 
-Session 3: login + auth + token storage (Windows Credential Manager via `keyring`), 2FA (TOTP), and the CMS-backed expansion config endpoint. That unblocks the character list / armory / shop stack.
+## Auth model
+
+- Tauri command `auth_login(cms_base, username, password)` returns either `Ok` or `Needs2fa { pendingToken }`. On success, tokens go into Windows Credential Manager via `keyring` (service `com.starfall.launcher`).
+- All authenticated UI calls go through `cms_fetch(cms_base, method, path, body)` which the Rust side reads the token from keyring and bearer-attaches. Frontend never holds a JWT.
+- On 401 from the CMS, tokens are cleared and the protected-route guard kicks the user back to `/login`.
+
+## Mock CMS
+
+`mock-server/cms.js` ships every spec §4 endpoint with deterministic fake data. One mock account: `starfall` / `starfall`. To use it, start the mock and the launcher's default `VITE_CMS_BASE` env var is `http://127.0.0.1:8787`. Set it to the real CMS base URL in production.
+
+## Out of scope (still)
+
+- Real CMS — point `VITE_CMS_BASE` at the production host once it exists
+- Auto-updater for the launcher itself
+- Code signing
+- Discord Rich Presence (deferred — Discord crate adds linker complexity on Windows; can add when there's a real RPC app id)
+- Native armory rebuild (current iframe is good enough)
 
 ## Dev notes
 
