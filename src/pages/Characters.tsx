@@ -156,7 +156,8 @@ function numberFmt(n?: number): string {
 }
 
 function formatMoney(copper?: number): string {
-  if (!copper) return "—";
+  if (copper === undefined || copper === null) return "—";
+  if (copper === 0) return "0c";
   const gold = Math.floor(copper / 10000);
   const silver = Math.floor((copper % 10000) / 100);
   const cop = copper % 100;
@@ -166,8 +167,13 @@ function formatMoney(copper?: number): string {
 }
 
 function formatPlayed(sec?: number): string {
-  if (!sec) return "—";
+  if (sec === undefined || sec === null) return "—";
+  if (sec === 0) return "0m";
   const h = Math.floor(sec / 3600);
+  if (h === 0) {
+    const m = Math.floor(sec / 60);
+    return `${m}m`;
+  }
   if (h < 24) return `${h}h`;
   const d = Math.floor(h / 24);
   return `${d}d ${h % 24}h`;
