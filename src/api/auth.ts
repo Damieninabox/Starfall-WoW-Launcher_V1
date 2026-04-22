@@ -5,12 +5,14 @@ export type LoginResult =
   | { kind: "ok"; username: string }
   | { kind: "needs2fa"; pendingToken: string };
 
+// Rust's `#[serde(rename_all = "camelCase", tag = "kind")]` emits lowercase
+// variant tags ("ok" / "needs2fa"), not PascalCase. Don't capitalize here.
 type RawLoginResult =
-  | { kind: "Ok"; username: string }
-  | { kind: "Needs2fa"; pendingToken: string };
+  | { kind: "ok"; username: string }
+  | { kind: "needs2fa"; pendingToken: string };
 
 function normalize(raw: RawLoginResult): LoginResult {
-  if (raw.kind === "Ok") return { kind: "ok", username: raw.username };
+  if (raw.kind === "ok") return { kind: "ok", username: raw.username };
   return { kind: "needs2fa", pendingToken: raw.pendingToken };
 }
 

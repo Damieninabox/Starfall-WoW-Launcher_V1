@@ -17,16 +17,19 @@ export default function Login() {
 
   const submitLogin = async (e: FormEvent) => {
     e.preventDefault();
+    console.log("[login] submit", { username: username.trim(), remember });
     setBusy(true);
     setError(null);
     try {
       const result = await login(username.trim(), password, remember);
+      console.log("[login] result", result);
       if (result.kind === "needs2fa") {
         setPending(result.pendingToken, username.trim());
       } else {
         await finishAuth(result.username);
       }
     } catch (err) {
+      console.error("[login] failed", err);
       setError(prettyError(err));
     } finally {
       setBusy(false);
@@ -119,6 +122,7 @@ export default function Login() {
           <button
             type="submit"
             disabled={busy}
+            onClick={() => console.log("[login] button click")}
             className="mt-2 rounded bg-violet-500 px-4 py-2 text-sm font-semibold text-neutral-950 hover:bg-violet-400 disabled:opacity-50"
           >
             {busy ? "Signing in…" : "Sign in"}
