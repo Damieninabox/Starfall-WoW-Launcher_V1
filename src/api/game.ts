@@ -40,3 +40,4 @@ export async function launchGame(
 ): Promise<void> {
   await invoke("launch_game", { installDir, args });
 }
+

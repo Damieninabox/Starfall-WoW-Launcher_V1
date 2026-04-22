@@ -44,7 +44,7 @@ export default function Characters() {
                       className={[
                         "flex w-full flex-col items-start gap-0.5 rounded border p-3 text-left transition-colors",
                         isSel
-                          ? "border-amber-500 bg-amber-500/10"
+                          ? "border-violet-500 bg-violet-500/10"
                           : "border-neutral-800 bg-neutral-900/60 hover:border-neutral-700",
                       ].join(" ")}
                     >
@@ -96,3 +96,4 @@ function groupBy<T, K>(arr: T[], key: (t: T) => K): Map<K, T[]> {
   }
   return m;
 }
+

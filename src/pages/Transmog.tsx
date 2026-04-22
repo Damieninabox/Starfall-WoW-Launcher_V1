@@ -99,7 +99,7 @@ export default function Transmog() {
                 </div>
                 <button
                   onClick={() => add(it.id)}
-                  className="rounded bg-amber-500 px-3 py-1 text-xs font-semibold text-neutral-950 hover:bg-amber-400"
+                  className="rounded bg-violet-500 px-3 py-1 text-xs font-semibold text-neutral-950 hover:bg-violet-400"
                 >
                   + Add
                 </button>
@@ -165,3 +165,4 @@ export default function Transmog() {
     </div>
   );
 }
+

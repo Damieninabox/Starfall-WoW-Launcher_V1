@@ -112,7 +112,7 @@ export default function Home() {
       >
         <header className="flex flex-col gap-2">
           <h1 className="text-3xl font-semibold tracking-tight">
-            Welcome back, <span className="text-amber-300">{displayName ?? "stranger"}</span>.
+            Welcome back, <span className="text-violet-200">{displayName ?? "stranger"}</span>.
           </h1>
           <p className="text-sm text-neutral-400">
             {installDir ? (
@@ -125,7 +125,7 @@ export default function Home() {
                 No install folder yet.{" "}
                 <button
                   onClick={() => navigate("/install")}
-                  className="text-amber-400 underline underline-offset-2 hover:text-amber-300"
+                  className="text-violet-300 underline underline-offset-2 hover:text-violet-200"
                 >
                   Go to Install
                 </button>
@@ -150,7 +150,7 @@ export default function Home() {
                     "flex flex-col items-start gap-1 rounded-lg border p-3 text-left transition-colors",
                     exp.enabled
                       ? isSelected
-                        ? "border-amber-500 bg-amber-500/10"
+                        ? "border-violet-500 bg-violet-500/10"
                         : "border-neutral-800 bg-neutral-900/60 hover:border-neutral-700"
                       : "cursor-not-allowed border-neutral-900 bg-neutral-950 opacity-50",
                   ].join(" ")}
@@ -188,7 +188,7 @@ export default function Home() {
           <button
             onClick={handlePlay}
             disabled={running || !activeExpansion?.enabled}
-            className="w-full rounded-lg bg-amber-500 px-6 py-4 text-lg font-semibold text-neutral-950 transition-colors hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-50"
+            className="w-full rounded-lg bg-violet-500 px-6 py-4 text-lg font-semibold text-neutral-950 transition-colors hover:bg-violet-400 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {running ? message : "Play"}
           </button>
@@ -226,3 +226,4 @@ export default function Home() {
     </div>
   );
 }
+

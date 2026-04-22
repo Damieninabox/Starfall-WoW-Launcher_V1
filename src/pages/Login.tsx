@@ -71,7 +71,7 @@ export default function Login() {
   return (
     <div className="mx-auto flex max-w-md flex-col gap-6 pt-12">
       <div className="flex flex-col items-center gap-2 text-center">
-        <div className="text-4xl font-bold tracking-tight text-amber-400">Starfall</div>
+        <div className="text-4xl font-bold tracking-tight text-violet-300">Starfall</div>
         <div className="text-sm text-neutral-400">Sign in to continue</div>
       </div>
 
@@ -100,7 +100,7 @@ export default function Login() {
           <button
             type="submit"
             disabled={busy}
-            className="mt-2 rounded bg-amber-500 px-4 py-2 text-sm font-semibold text-neutral-950 hover:bg-amber-400 disabled:opacity-50"
+            className="mt-2 rounded bg-violet-500 px-4 py-2 text-sm font-semibold text-neutral-950 hover:bg-violet-400 disabled:opacity-50"
           >
             {busy ? "Signing in…" : "Sign in"}
           </button>
@@ -131,7 +131,7 @@ export default function Login() {
           <button
             type="submit"
             disabled={busy}
-            className="mt-2 rounded bg-amber-500 px-4 py-2 text-sm font-semibold text-neutral-950 hover:bg-amber-400 disabled:opacity-50"
+            className="mt-2 rounded bg-violet-500 px-4 py-2 text-sm font-semibold text-neutral-950 hover:bg-violet-400 disabled:opacity-50"
           >
             {busy ? "Verifying…" : "Verify"}
           </button>
@@ -153,3 +153,4 @@ export default function Login() {
     </div>
   );
 }
+

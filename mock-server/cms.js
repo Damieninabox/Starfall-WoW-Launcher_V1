@@ -4,6 +4,12 @@
 // user store.
 
 import crypto from "node:crypto";
+import {
+  dbEnabled,
+  findAccountByUsername,
+  charactersForAccount,
+  guildByKey,
+} from "./db.js";
 
 // --- fixtures ---------------------------------------------------------------
 
@@ -158,7 +164,7 @@ function bearerUser(req) {
   const token = auth.slice("Bearer ".length);
   const s = sessions.get(token);
   if (!s) return null;
-  return USER.username === s.username ? USER : null;
+  return { ...USER, username: s.username, accountId: s.accountId ?? null };
 }
 
 function readBody(req) {
@@ -217,17 +223,38 @@ export async function handleCms(req, res, url) {
   // -- public
   if (req.method === "POST" && p === "/api/launcher/login") {
     const body = await readBody(req);
-    if (body.username !== USER.username || body.password !== USER.password) {
-      sendJson(res, 401, { error: "invalid credentials" });
-      return true;
+    // Real DB: accept any account that exists (password is SRP6-hashed, can't
+    // verify here without a server handshake). Dev mock: starfall/starfall.
+    let user = null;
+    if (dbEnabled() && body.username) {
+      const acct = await findAccountByUsername(String(body.username).toUpperCase());
+      if (acct) {
+        user = {
+          ...USER,
+          username: acct.username,
+          displayName: acct.username,
+          email: acct.email ?? USER.email,
+          accountId: acct.id,
+        };
+      }
     }
-    if (USER.has2fa) {
+    if (!user) {
+      if (body.username !== USER.username || body.password !== USER.password) {
+        sendJson(res, 401, { error: "invalid credentials" });
+        return true;
+      }
+      user = USER;
+    }
+    if (user.has2fa) {
       const pending = newToken("pend");
-      pending2fa.set(pending, USER.username);
+      pending2fa.set(pending, user.username);
       sendJson(res, 200, { requires2fa: true, pendingToken: pending });
       return true;
     }
-    sendJson(res, 200, issueLogin(USER, req));
+    // cache the user under the session so follow-up auth'd calls resolve it
+    const { token, refreshToken } = issueLogin(user, req);
+    sessions.set(token, { username: user.username, accountId: user.accountId, issuedAt: Date.now() });
+    sendJson(res, 200, { token, refreshToken });
     return true;
   }
 
@@ -359,6 +386,12 @@ export async function handleCms(req, res, url) {
 
   if (req.method === "GET" && p === "/api/account/characters") {
     if (!requireAuth()) return true;
+    if (user.accountId) {
+      const rows = await charactersForAccount(user.accountId);
+      if (rows && rows.length > 0) {
+        return sendJson(res, 200, { characters: rows }) ?? true;
+      }
+    }
     return sendJson(res, 200, { characters: CHARACTERS }) ?? true;
   }
 
@@ -425,7 +458,17 @@ export async function handleCms(req, res, url) {
   // guild
   const guild = p.match(/^\/api\/guild\/([^/]+)$/);
   if (req.method === "GET" && guild) {
-    const g = GUILDS[guild[1]];
+    const key = guild[1];
+    const dbg = await guildByKey(key);
+    if (dbg) {
+      return sendJson(res, 200, {
+        name: dbg.name,
+        motd: dbg.motd,
+        memberCount: dbg.memberCount,
+        onlineCount: dbg.onlineCount,
+      }) ?? true;
+    }
+    const g = GUILDS[key];
     if (!g) return sendJson(res, 404, { error: "not found" });
     return sendJson(res, 200, {
       name: g.name,

@@ -102,7 +102,7 @@ export default function Settings() {
         "backup_wtf",
         { installDir, outPath: picked },
       );
-      setStatus(`Backup: ${r.filesZipped} files, ${formatBytes(r.bytesZipped)} → ${r.zipPath}`);
+      setStatus(`Backup: ${r.filesZipped} files, ${formatBytes(r.bytesZipped)} â†’ ${r.zipPath}`);
     } catch (e) {
       setError(String(e));
     }
@@ -216,7 +216,7 @@ export default function Settings() {
         <div className="text-xs text-neutral-500">
           Currently on disk: <span className="font-mono text-neutral-300">{realmlistDisk ?? "—"}</span>
           {realmlistDisk && realmlistDisk !== realmlistServer && (
-            <span className="ml-2 rounded bg-amber-500/20 px-2 py-0.5 text-amber-300">Will be rewritten on next Play</span>
+            <span className="ml-2 rounded bg-violet-500/20 px-2 py-0.5 text-violet-200">Will be rewritten on next Play</span>
           )}
         </div>
       </Section>
@@ -228,7 +228,7 @@ export default function Settings() {
               key={opt.value}
               className={[
                 "flex cursor-pointer flex-col gap-0.5 rounded border p-3",
-                cachePolicy === opt.value ? "border-amber-500 bg-amber-500/10" : "border-neutral-800 bg-neutral-950 hover:border-neutral-700",
+                cachePolicy === opt.value ? "border-violet-500 bg-violet-500/10" : "border-neutral-800 bg-neutral-950 hover:border-neutral-700",
               ].join(" ")}
             >
               <div className="flex items-center gap-2">
@@ -236,7 +236,7 @@ export default function Settings() {
                   type="radio"
                   checked={cachePolicy === opt.value}
                   onChange={() => setCachePolicy(opt.value)}
-                  className="accent-amber-500"
+                  className="accent-violet-500"
                 />
                 <span className="text-sm font-medium">{opt.label}</span>
               </div>
@@ -287,13 +287,13 @@ export default function Settings() {
                 placeholder="123456"
                 className="w-32 rounded border border-neutral-700 bg-neutral-950 px-3 py-2 text-center font-mono tracking-widest"
               />
-              <button onClick={verifyEnroll} className="rounded bg-amber-500 px-3 py-2 text-sm font-semibold text-neutral-950 hover:bg-amber-400">
+              <button onClick={verifyEnroll} className="rounded bg-violet-500 px-3 py-2 text-sm font-semibold text-neutral-950 hover:bg-violet-400">
                 Verify
               </button>
             </div>
           </div>
         ) : (
-          <button onClick={startEnroll} className="self-start rounded bg-amber-500 px-4 py-2 text-sm font-semibold text-neutral-950 hover:bg-amber-400">
+          <button onClick={startEnroll} className="self-start rounded bg-violet-500 px-4 py-2 text-sm font-semibold text-neutral-950 hover:bg-violet-400">
             Enable 2FA
           </button>
         )}
@@ -352,3 +352,4 @@ function formatBytes(n: number): string {
   if (n < 1024 * 1024 * 1024) return `${(n / (1024 * 1024)).toFixed(1)} MB`;
   return `${(n / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
+

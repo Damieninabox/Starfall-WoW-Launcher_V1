@@ -186,3 +186,4 @@ export const api = {
   submitTicket: (payload: Record<string, unknown>) =>
     cmsPost<{ id: string; url: string }>("/api/support/tickets", payload),
 };
+

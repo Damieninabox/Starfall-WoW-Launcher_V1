@@ -11,6 +11,7 @@ import Transmog from "./pages/Transmog";
 import BugReport from "./pages/BugReport";
 import Addons from "./pages/Addons";
 import ProtectedRoute from "./components/ProtectedRoute";
+import Starfield from "./components/Starfield";
 import { useAuthStore } from "./state/auth";
 
 const navItems = [
@@ -33,9 +34,14 @@ function Shell({ children }: { children: React.ReactNode }) {
   const displayName = useAuthStore((s) => s.displayName);
   return (
     <div className="flex h-full flex-col">
-      <header className="flex flex-wrap items-center gap-4 border-b border-neutral-800 bg-neutral-950/85 px-6 py-3 backdrop-blur">
-        <div className="text-lg font-semibold tracking-wide text-amber-400">
-          Starfall
+      <header className="flex flex-wrap items-center gap-4 border-b border-violet-500/20 bg-[#0c0f1f]/75 px-6 py-3 backdrop-blur">
+        <div className="flex items-baseline gap-2">
+          <span className="text-lg font-semibold tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-cyan-200 to-violet-400">
+            Starfall
+          </span>
+          <span className="text-[10px] uppercase tracking-[0.3em] text-violet-300/60">
+            Cataclysm
+          </span>
         </div>
         <nav className="flex gap-1">
           {navItems.map((item) => (
@@ -46,8 +52,8 @@ function Shell({ children }: { children: React.ReactNode }) {
                 [
                   "rounded px-3 py-1.5 text-sm transition-colors",
                   isActive
-                    ? "bg-amber-500/20 text-amber-300"
-                    : "text-neutral-400 hover:bg-neutral-800 hover:text-neutral-100",
+                    ? "bg-violet-500/20 text-violet-200 ring-1 ring-violet-400/40"
+                    : "text-neutral-400 hover:bg-white/5 hover:text-neutral-100",
                 ].join(" ")
               }
             >
@@ -65,8 +71,8 @@ function Shell({ children }: { children: React.ReactNode }) {
                   [
                     "rounded px-2 py-1",
                     isActive
-                      ? "bg-neutral-800 text-amber-300"
-                      : "hover:bg-neutral-800 hover:text-neutral-100",
+                      ? "bg-white/10 text-cyan-200"
+                      : "hover:bg-white/5 hover:text-neutral-100",
                   ].join(" ")
                 }
               >
@@ -75,7 +81,7 @@ function Shell({ children }: { children: React.ReactNode }) {
             ))}
           </div>
           {displayName && (
-            <div className="rounded-full border border-neutral-800 px-3 py-1 font-mono text-neutral-300">
+            <div className="rounded-full border border-violet-500/30 bg-violet-500/10 px-3 py-1 font-mono text-violet-100">
               {displayName}
             </div>
           )}
@@ -118,5 +124,11 @@ function AppRoutes() {
 }
 
 export default function App() {
-  return <AppRoutes />;
+  return (
+    <>
+      <Starfield />
+      <AppRoutes />
+    </>
+  );
 }
+

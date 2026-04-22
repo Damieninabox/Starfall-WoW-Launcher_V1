@@ -47,7 +47,7 @@ export default function Addons() {
                     {a.category}
                   </span>
                   <span className="text-xs text-neutral-500">v{a.version}</span>
-                  <span className="ml-auto rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] uppercase tracking-widest text-amber-300">
+                  <span className="ml-auto rounded-full bg-violet-500/20 px-2 py-0.5 text-[10px] uppercase tracking-widest text-violet-200">
                     Managed
                   </span>
                 </div>
@@ -58,7 +58,7 @@ export default function Addons() {
                   type="checkbox"
                   checked={!isDisabled}
                   onChange={() => toggle(a.id)}
-                  className="h-4 w-4 accent-amber-500"
+                  className="h-4 w-4 accent-violet-500"
                 />
                 <span>{isDisabled ? "Off" : "On"}</span>
               </label>
@@ -72,3 +72,4 @@ export default function Addons() {
     </div>
   );
 }
+

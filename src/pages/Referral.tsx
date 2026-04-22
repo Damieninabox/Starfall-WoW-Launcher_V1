@@ -38,7 +38,7 @@ export default function ReferralPage() {
           />
           <button
             onClick={copy}
-            className="rounded bg-amber-500 px-4 py-2 text-sm font-semibold text-neutral-950 hover:bg-amber-400"
+            className="rounded bg-violet-500 px-4 py-2 text-sm font-semibold text-neutral-950 hover:bg-violet-400"
           >
             {copied ? "Copied!" : "Copy"}
           </button>
@@ -73,7 +73,7 @@ function Stat({
       className={[
         "rounded-lg border p-4 text-center",
         highlight
-          ? "border-amber-500/60 bg-amber-500/10"
+          ? "border-violet-500/60 bg-violet-500/10"
           : "border-neutral-800 bg-neutral-900/60",
       ].join(" ")}
     >
@@ -82,3 +82,4 @@ function Stat({
     </div>
   );
 }
+

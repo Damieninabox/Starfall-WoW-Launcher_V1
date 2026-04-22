@@ -74,3 +74,4 @@ export function onProgress(
 ): Promise<UnlistenFn> {
   return listen<ProgressSnapshot>("patcher:progress", (e) => handler(e.payload));
 }
+

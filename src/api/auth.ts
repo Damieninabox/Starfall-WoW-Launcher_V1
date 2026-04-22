@@ -44,3 +44,4 @@ export async function logout(): Promise<void> {
 export async function hasToken(): Promise<boolean> {
   return await invoke<boolean>("auth_has_token");
 }
+

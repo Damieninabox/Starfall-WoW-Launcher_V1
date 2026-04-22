@@ -50,7 +50,7 @@ export default function BugReport() {
               href={result.url}
               target="_blank"
               rel="noreferrer"
-              className="text-amber-300 underline underline-offset-2"
+              className="text-violet-200 underline underline-offset-2"
             >
               {result.url}
             </a>
@@ -115,7 +115,7 @@ export default function BugReport() {
           <button
             type="submit"
             disabled={busy}
-            className="mt-2 self-start rounded bg-amber-500 px-4 py-2 text-sm font-semibold text-neutral-950 hover:bg-amber-400 disabled:opacity-50"
+            className="mt-2 self-start rounded bg-violet-500 px-4 py-2 text-sm font-semibold text-neutral-950 hover:bg-violet-400 disabled:opacity-50"
           >
             {busy ? "Sending…" : "Submit"}
           </button>
@@ -124,3 +124,4 @@ export default function BugReport() {
     </div>
   );
 }
+

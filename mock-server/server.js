@@ -5,6 +5,7 @@ import crypto from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { handleCms } from "./cms.js";
+import { initDb } from "./db.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const FILES_DIR = path.join(__dirname, "files");
@@ -153,6 +154,7 @@ async function serveFile(req, res, relPath) {
 }
 
 async function main() {
+  await initDb();
   await ensureFiles();
   let manifest = await buildManifest();
   console.log(`[mock] manifest ready (${manifest.files.length} files, version ${manifest.version})`);

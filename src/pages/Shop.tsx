@@ -23,9 +23,9 @@ export default function Shop() {
           href={`${cmsBase()}/shop?sso=${sso.ssoToken}`}
           target="_blank"
           rel="noreferrer"
-          className="text-xs text-neutral-400 hover:text-amber-300"
+          className="text-xs text-neutral-400 hover:text-violet-200"
         >
-          Open in browser ↗
+          Open in browser â†—
         </a>
       </div>
       <iframe
@@ -36,3 +36,4 @@ export default function Shop() {
     </div>
   );
 }
+

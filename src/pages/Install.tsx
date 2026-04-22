@@ -196,7 +196,7 @@ export default function Install() {
         <button
           onClick={startInstall}
           disabled={running || !installDir}
-          className="rounded bg-amber-500 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-amber-400 disabled:opacity-50"
+          className="rounded bg-violet-500 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-violet-400 disabled:opacity-50"
         >
           Start install
         </button>
@@ -255,7 +255,7 @@ export default function Install() {
           </div>
           <div className="h-2 overflow-hidden rounded bg-neutral-800">
             <div
-              className="h-full bg-amber-500 transition-[width] duration-100"
+              className="h-full bg-violet-500 transition-[width] duration-100"
               style={{ width: `${overallPct}%` }}
             />
           </div>
@@ -308,3 +308,4 @@ export default function Install() {
     </div>
   );
 }
+

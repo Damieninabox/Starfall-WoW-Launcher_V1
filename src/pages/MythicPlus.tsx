@@ -37,7 +37,7 @@ export default function MythicPlus() {
             className={[
               "rounded px-4 py-2 text-sm",
               tab === t
-                ? "bg-amber-500/20 text-amber-300"
+                ? "bg-violet-500/20 text-violet-200"
                 : "text-neutral-400 hover:bg-neutral-800 hover:text-neutral-100",
             ].join(" ")}
           >
@@ -88,7 +88,7 @@ export default function MythicPlus() {
                   <td className="px-4 py-2 font-mono">#{r.rank}</td>
                   <td className="px-4 py-2">{r.dungeon}</td>
                   <td className="px-4 py-2 font-mono">{r.timer}</td>
-                  <td className="px-4 py-2 font-mono text-amber-300">{r.score}</td>
+                  <td className="px-4 py-2 font-mono text-violet-200">{r.score}</td>
                   <td className="px-4 py-2 text-xs text-neutral-400">
                     {r.party.join(", ")}
                   </td>
@@ -114,7 +114,7 @@ export default function MythicPlus() {
                     <div className="text-lg font-semibold">{r.raid}</div>
                     <div className="text-xs text-neutral-500">{r.tier}</div>
                   </div>
-                  <div className="font-mono text-sm text-amber-300">
+                  <div className="font-mono text-sm text-violet-200">
                     {killed} / {total}
                   </div>
                 </div>
@@ -159,3 +159,4 @@ export default function MythicPlus() {
     </div>
   );
 }
+
