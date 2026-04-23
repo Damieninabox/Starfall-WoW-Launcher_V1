@@ -1,7 +1,7 @@
 // Icon URLs.
-// Prefer assets served by the CMS (class/race SVGs, Mythic+ dungeon images)
-// so the launcher visually matches the website; fall back to Wowhead's CDN
-// for currencies and anything the CMS doesn't ship.
+// Assets are bundled with the launcher under /public so they load without
+// a CMS round-trip and work even offline. Currencies still fall back to
+// Wowhead's CDN because the launcher doesn't ship them locally.
 
 const WOWHEAD = "https://wow.zamimg.com/images/wow/icons/large";
 
@@ -14,7 +14,7 @@ export function wowheadIcon(slug: string): string {
   return `${WOWHEAD}/${slug}.jpg`;
 }
 
-// --- class icons (CMS public/images/classes/*.svg) -----------------------
+// --- class icons (public/classes/*.svg) ----------------------------------
 
 const CLASS_SLUGS: Record<string, string> = {
   Warrior: "warrior",
@@ -31,11 +31,15 @@ const CLASS_SLUGS: Record<string, string> = {
 
 export function classIcon(className: string): string | null {
   const slug = CLASS_SLUGS[className];
-  if (!slug) return null;
-  return `${cmsBase()}/images/classes/${slug}.svg`;
+  return slug ? `/classes/${slug}.svg` : null;
 }
 
-// --- race icons (CMS public/images/races/*.svg) --------------------------
+// --- race icons ----------------------------------------------------------
+// Two flavors:
+//   * racePortrait(race, gender)  -> gender-specific WebP portrait
+//     (public/icons/race/<slug>-<gender>.webp)
+//   * raceIcon(race, gender)      -> flat SVG silhouette
+//     (public/races/<slug>.svg) — good for tiny inline chips
 
 const RACE_SLUGS: Record<string, string> = {
   Human: "human",
@@ -54,14 +58,58 @@ const RACE_SLUGS: Record<string, string> = {
 
 export function raceIcon(race: string, _gender?: string): string | null {
   const slug = RACE_SLUGS[race];
-  if (!slug) return null;
-  return `${cmsBase()}/images/races/${slug}.svg`;
+  return slug ? `/races/${slug}.svg` : null;
 }
 
-// --- Mythic+ dungeon backdrop --------------------------------------------
-// CMS uses lowercase names without "the ", no apostrophes. e.g.
-//   "The Stonecore"        -> "stonecore.jpg"
-//   "Lost City of the Tol'vir" -> "lost city of the tolvir.jpg"
+export function racePortrait(race: string, gender?: string): string | null {
+  const slug = RACE_SLUGS[race];
+  if (!slug) return null;
+  const g = gender === "Female" ? "female" : "male";
+  return `/icons/race/${slug}-${g}.webp`;
+}
+
+// --- faction ------------------------------------------------------------
+
+export function factionIcon(faction: "Alliance" | "Horde"): string {
+  return faction === "Horde" ? "/icons/faction/horde.png" : "/icons/faction/alliance.png";
+}
+
+// --- equipment slot icons (public/icons/character/*.gif) ----------------
+
+const SLOT_FILES: Record<string, string> = {
+  Head: "head",
+  Neck: "neck",
+  Shoulder: "shoulders",
+  Chest: "chest",
+  Waist: "waist",
+  Legs: "legs",
+  Feet: "feet",
+  Wrist: "wrists",
+  Hands: "hands",
+  Finger: "finger",
+  Trinket: "trinket",
+  "1H Weapon": "mainhand",
+  "2H Weapon": "mainhand",
+  "Main Hand": "mainhand",
+  "Off Hand": "offhand",
+  Held: "offhand",
+  Shield: "offhand",
+  Ranged: "ranged",
+  Thrown: "ranged",
+  Cloak: "body",
+  Shirt: "chest",
+  Tabard: "tabard",
+};
+
+export function slotIcon(type: string): string | null {
+  const base = SLOT_FILES[type];
+  return base ? `/icons/character/${base}.gif` : null;
+}
+
+// --- Mythic+ dungeon backdrop -------------------------------------------
+// The CMS ships backdrops at C:/Starfall-WoW-CMS/public/images/mythic/map/,
+// which the mock-server exposes under /images/mythic/map/. Names are
+// lowercased, "the " stripped, apostrophes stripped.
 
 export function dungeonImage(dungeonName: string): string | null {
   if (!dungeonName) return null;
@@ -74,7 +122,13 @@ export function dungeonImage(dungeonName: string): string | null {
   return `${cmsBase()}/images/mythic/map/${encodeURIComponent(slug)}.jpg`;
 }
 
-// --- currency icons (Wowhead; no CMS equivalents shipped) ----------------
+// --- shop ---------------------------------------------------------------
+
+export const SHOP_CURRENCY_ICONS = {
+  stardust: "/icons/shop/stardust.png",
+} as const;
+
+// --- currency icons (Wowhead) -------------------------------------------
 
 export const CURRENCY_ICONS = {
   gold: wowheadIcon("inv_misc_coin_01"),
@@ -93,8 +147,6 @@ export const CURRENCY_ICONS = {
   played: wowheadIcon("inv_misc_pocketwatch_01"),
 } as const;
 
-// Keep `iconUrl` as a shim so existing callers that pass already-computed
-// slugs keep working. New callers should prefer classIcon/raceIcon/dungeonImage.
 export function iconUrl(slug: string): string {
   return wowheadIcon(slug);
 }

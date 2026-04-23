@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, type Character } from "../api/cms";
-import { classIcon, raceIcon, CURRENCY_ICONS } from "../lib/icons";
+import { classIcon, raceIcon, racePortrait, factionIcon, CURRENCY_ICONS } from "../lib/icons";
 
 const FACTION_COLORS: Record<Character["faction"], string> = {
   Alliance: "text-sky-300",
@@ -112,38 +112,55 @@ export default function Characters() {
 function CharacterDetail({ c }: { c: Character }) {
   const classColor = CLASS_COLORS[c.className] ?? "text-neutral-100";
   const clsIco = classIcon(c.className);
-  const raceIco = raceIcon(c.race, c.gender);
+  const portrait = racePortrait(c.race, c.gender);
+  const fallbackRace = raceIcon(c.race);
+  const factionImg = factionIcon(c.faction);
   const honorIcon =
     c.faction === "Horde" ? CURRENCY_ICONS.honorHorde : CURRENCY_ICONS.honorAlliance;
   return (
     <div className="flex flex-col gap-6">
-      <header>
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2">
-            {raceIco && <img src={raceIco} alt="" className="h-10 w-10 rounded" draggable={false} />}
-            {clsIco && <img src={clsIco} alt="" className="h-10 w-10 rounded" draggable={false} />}
+      <header className="flex flex-wrap items-center gap-4">
+        {(portrait || fallbackRace) && (
+          <img
+            src={portrait ?? fallbackRace!}
+            onError={(e) => {
+              const el = e.currentTarget as HTMLImageElement;
+              if (fallbackRace && el.src !== fallbackRace) el.src = fallbackRace;
+            }}
+            alt=""
+            className="h-20 w-20 rounded-lg object-cover ring-1 ring-violet-500/30"
+            draggable={false}
+          />
+        )}
+        <div className="flex-1">
+          <div className="flex flex-wrap items-center gap-3">
+            {clsIco && <img src={clsIco} alt="" className="h-8 w-8" draggable={false} />}
+            <h2 className={["text-3xl font-semibold tracking-tight", classColor].join(" ")}>
+              {c.name}
+            </h2>
+            <img
+              src={factionImg}
+              alt={c.faction}
+              title={c.faction}
+              className="h-7 w-7"
+              draggable={false}
+            />
+            {c.online && (
+              <span className="flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-xs text-emerald-300">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> Online
+              </span>
+            )}
           </div>
-          <h2 className={["text-3xl font-semibold tracking-tight", classColor].join(" ")}>
-            {c.name}
-          </h2>
-          <span className={["text-sm", FACTION_COLORS[c.faction]].join(" ")}>
-            {c.faction}
-          </span>
-          {c.online && (
-            <span className="flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-xs text-emerald-300">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> Online
-            </span>
+          <div className="mt-2 text-sm text-neutral-400">
+            Level {c.level} {c.race} {c.className}
+            {c.gender ? ` · ${c.gender}` : ""}
+          </div>
+          {c.guild && (
+            <div className="mt-1 text-sm text-neutral-500">
+              &lt;<span className="text-violet-300">{c.guild}</span>&gt;
+            </div>
           )}
         </div>
-        <div className="mt-2 text-sm text-neutral-400">
-          Level {c.level} {c.race} {c.className}
-          {c.gender ? ` · ${c.gender}` : ""}
-        </div>
-        {c.guild && (
-          <div className="mt-1 text-sm text-neutral-500">
-            &lt;<span className="text-violet-300">{c.guild}</span>&gt;
-          </div>
-        )}
       </header>
 
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
