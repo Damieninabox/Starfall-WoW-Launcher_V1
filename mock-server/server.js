@@ -182,12 +182,14 @@ async function main() {
         url.pathname.startsWith("/armory/")
       ) {
         const handled = await handleCms(req, res, url);
-        if (handled) return;
+        if (handled || res.headersSent) return;
       }
+      if (res.headersSent) return;
       res.writeHead(404, { "content-type": "text/plain" });
       res.end("not found");
     } catch (err) {
       console.error("[mock] error:", err);
+      if (res.writableEnded) return;
       if (!res.headersSent) res.writeHead(500, { "content-type": "text/plain" });
       res.end("internal error");
     }

@@ -208,6 +208,7 @@ function readBody(req) {
 }
 
 function sendJson(res, status, body) {
+  if (res.headersSent) return true;
   const payload = JSON.stringify(body);
   res.writeHead(status, {
     "content-type": "application/json; charset=utf-8",
@@ -218,15 +219,18 @@ function sendJson(res, status, body) {
     "cache-control": "no-store",
   });
   res.end(payload);
+  return true;
 }
 
 function sendHtml(res, body) {
+  if (res.headersSent) return true;
   const buf = Buffer.from(body, "utf-8");
   res.writeHead(200, {
     "content-type": "text/html; charset=utf-8",
     "content-length": buf.length,
   });
   res.end(buf);
+  return true;
 }
 
 // --- route handlers ---------------------------------------------------------
