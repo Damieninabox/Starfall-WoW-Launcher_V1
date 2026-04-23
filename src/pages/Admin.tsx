@@ -11,6 +11,18 @@ type Setting = {
   description: string | null;
 };
 
+// Settings that exist in starfall_cms.site_settings but aren't actionable
+// from the launcher's admin panel (they're website-only flows).
+const HIDDEN_KEYS = new Set([
+  "account_deletion_enabled",
+  "max_accounts_per_email",
+  "registration_enabled",
+  "site_description",
+  "donations_enabled",
+  "discord_notifications_changelog",
+  "discord_notifications_bugtracker",
+]);
+
 export default function Admin() {
   const [allowed, setAllowed] = useState<boolean | null>(null);
   const [settings, setSettings] = useState<Setting[]>([]);
@@ -37,6 +49,7 @@ export default function Admin() {
   const grouped = useMemo(() => {
     const m = new Map<string, Setting[]>();
     for (const s of settings) {
+      if (HIDDEN_KEYS.has(s.key)) continue;
       const list = m.get(s.category) ?? [];
       list.push(s);
       m.set(s.category, list);
@@ -139,16 +152,7 @@ export default function Admin() {
                         />
                         <span>{current === "1" ? "Enabled" : "Disabled"}</span>
                       </label>
-                    ) : s.type === "number" ? (
-                      <input
-                        type="number"
-                        value={current}
-                        onChange={(e) =>
-                          setEdits((p) => ({ ...p, [s.key]: e.currentTarget.value }))
-                        }
-                        className="w-40 rounded border border-neutral-700 bg-neutral-950 px-3 py-1.5 font-mono text-sm"
-                      />
-                    ) : s.type === "html" || (s.value && s.value.length > 80) ? (
+                    ) : s.type === "html" ? (
                       <textarea
                         value={current}
                         onChange={(e) =>
@@ -160,6 +164,7 @@ export default function Admin() {
                     ) : (
                       <input
                         type="text"
+                        inputMode={s.type === "number" ? "numeric" : undefined}
                         value={current}
                         onChange={(e) =>
                           setEdits((p) => ({ ...p, [s.key]: e.currentTarget.value }))
