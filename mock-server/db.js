@@ -503,29 +503,37 @@ const INV_TYPE = {
   26: "Ranged", 27: "Quiver", 28: "Relic",
 };
 
+function mapItemRow(r) {
+  return {
+    id: Number(r.id),
+    name: r.name,
+    icon: r.icon_name ?? null,
+    iconUrl: r.icon_name
+      ? `https://wow.zamimg.com/images/wow/icons/large/${r.icon_name}.jpg`
+      : null,
+    quality: Number(r.quality),
+    ilvl: Number(r.ilvl),
+    type: INV_TYPE[Number(r.invType)] ?? "—",
+    setId: null,
+  };
+}
+
 export async function itemSearch(queryStr, limit = 30) {
   if (!dbEnabled()) return null;
   const needle = String(queryStr ?? "").trim();
   if (needle.length < 2) return [];
   try {
     const [rows] = await pool.query(
-      `SELECT entry AS id, name, Quality AS quality, ItemLevel AS ilvl,
-              InventoryType AS invType
-       FROM \`${CONFIG.worldDb}\`.item_template
-       WHERE Quality >= 2 AND name LIKE ?
-       ORDER BY ItemLevel DESC, name ASC
+      `SELECT it.entry AS id, it.name, it.Quality AS quality, it.ItemLevel AS ilvl,
+              it.InventoryType AS invType, ic.icon_name
+       FROM \`${CONFIG.worldDb}\`.item_template it
+       LEFT JOIN \`${CONFIG.cmsDb}\`.item_icon_cache ic ON ic.item_entry = it.entry
+       WHERE it.Quality >= 2 AND it.name LIKE ?
+       ORDER BY it.ItemLevel DESC, it.name ASC
        LIMIT ?`,
       [`%${needle}%`, limit],
     );
-    return rows.map((r) => ({
-      id: Number(r.id),
-      name: r.name,
-      icon: `item-${r.id}`,
-      quality: Number(r.quality),
-      ilvl: Number(r.ilvl),
-      type: INV_TYPE[Number(r.invType)] ?? "—",
-      setId: null,
-    }));
+    return rows.map(mapItemRow);
   } catch (e) { console.warn("[db] itemSearch:", e.message); return null; }
 }
 
@@ -533,21 +541,14 @@ export async function itemById(id) {
   if (!dbEnabled()) return null;
   try {
     const rows = await q(
-      `SELECT entry AS id, name, Quality AS quality, ItemLevel AS ilvl, InventoryType AS invType
-       FROM \`${CONFIG.worldDb}\`.item_template WHERE entry = ? LIMIT 1`,
+      `SELECT it.entry AS id, it.name, it.Quality AS quality, it.ItemLevel AS ilvl,
+              it.InventoryType AS invType, ic.icon_name
+       FROM \`${CONFIG.worldDb}\`.item_template it
+       LEFT JOIN \`${CONFIG.cmsDb}\`.item_icon_cache ic ON ic.item_entry = it.entry
+       WHERE it.entry = ? LIMIT 1`,
       [id],
     );
-    const r = rows[0];
-    if (!r) return null;
-    return {
-      id: Number(r.id),
-      name: r.name,
-      icon: `item-${r.id}`,
-      quality: Number(r.quality),
-      ilvl: Number(r.ilvl),
-      type: INV_TYPE[Number(r.invType)] ?? "—",
-      setId: null,
-    };
+    return rows[0] ? mapItemRow(rows[0]) : null;
   } catch (e) { console.warn("[db] itemById:", e.message); return null; }
 }
 
@@ -620,6 +621,88 @@ export async function guildEvents(guildId) {
       when: new Date(Number(r.eventtime) * 1000).toISOString(),
     }));
   } catch (e) { console.warn("[db] guildEvents:", e.message); return null; }
+}
+
+// --- in-game calendar ----------------------------------------------------
+
+// Compute the next occurrence of a recurring game_event row.
+// TC's `occurence` is the repeat period in minutes (0 == one-shot);
+// `length` is the active duration in minutes; `start_time`/`end_time`
+// bracket the valid window.
+function nextOccurrence(row, now) {
+  const start = new Date(row.start_time).getTime();
+  const end = new Date(row.end_time).getTime();
+  const occurMin = Number(row.occurence ?? 0);
+  const lenMin = Number(row.length ?? 0);
+  const lenMs = lenMin * 60_000;
+
+  if (!Number.isFinite(start)) return null;
+  if (now > end) return null;
+
+  if (occurMin === 0) {
+    return {
+      start,
+      end: start + lenMs,
+      active: now >= start && now < start + lenMs,
+    };
+  }
+
+  if (now < start) {
+    return { start, end: start + lenMs, active: false };
+  }
+
+  const occurMs = occurMin * 60_000;
+  const cycles = Math.floor((now - start) / occurMs);
+  const curStart = start + cycles * occurMs;
+  const curEnd = curStart + lenMs;
+
+  if (now < curEnd && curStart <= end) {
+    return { start: curStart, end: curEnd, active: true };
+  }
+  const nextStart = curStart + occurMs;
+  if (nextStart > end) return null;
+  return { start: nextStart, end: nextStart + lenMs, active: false };
+}
+
+export async function worldEvents(limit = 40) {
+  if (!dbEnabled()) return null;
+  try {
+    const rows = await q(
+      `SELECT entry, start_time, end_time, occurence, length, holiday,
+              description, world_event, announce
+       FROM \`${CONFIG.worldDb}\`.game_event
+       WHERE world_event = 0
+         AND description <> ''
+         AND description IS NOT NULL`,
+    );
+    const now = Date.now();
+    const out = [];
+    for (const row of rows) {
+      const occ = nextOccurrence(row, now);
+      if (!occ) continue;
+      out.push({
+        id: Number(row.entry),
+        title: row.description,
+        holidayId: Number(row.holiday ?? 0) || null,
+        start: new Date(occ.start).toISOString(),
+        end: new Date(occ.end).toISOString(),
+        active: occ.active,
+        recurs: Number(row.occurence) > 0,
+        occurrenceMin: Number(row.occurence),
+        lengthMin: Number(row.length),
+      });
+    }
+    // Sort: active first (by end asc), then upcoming (by start asc).
+    out.sort((a, b) => {
+      if (a.active !== b.active) return a.active ? -1 : 1;
+      const key = a.active ? "end" : "start";
+      return new Date(a[key]).getTime() - new Date(b[key]).getTime();
+    });
+    return out.slice(0, limit);
+  } catch (e) {
+    console.warn("[db] worldEvents:", e.message);
+    return null;
+  }
 }
 
 export async function shutdownDb() {

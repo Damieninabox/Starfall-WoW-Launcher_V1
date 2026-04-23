@@ -18,6 +18,7 @@ import {
   cmsVoteSites,
   cmsAccountPoints,
   cmsRecordVote,
+  worldEvents,
   currentSeason,
   mplusWeeklyAffixes,
   mplusLeaderboard,
@@ -413,6 +414,11 @@ export async function handleCms(req, res, url) {
     return sendJson(res, 200, shop ?? { categories: [], items: [] }) ?? true;
   }
 
+  if (req.method === "GET" && p === "/api/calendar/events") {
+    const events = await worldEvents(40);
+    return sendJson(res, 200, { events: events ?? [] });
+  }
+
   if (req.method === "GET" && p === "/api/launcher/version") {
     return sendJson(res, 200, { latest: "0.1.0", downloadUrl: null, notes: "You're running the latest build." }) ?? true;
   }
@@ -504,23 +510,34 @@ export async function handleCms(req, res, url) {
   if (req.method === "GET" && p === "/api/account/wishlist") {
     if (!requireAuth()) return true;
     const set = wishlists.get(user.username) ?? new Set();
-    const items = [...set]
-      .map((id) => ITEM_DB.find((it) => it.id === id))
-      .filter(Boolean);
-    return sendJson(res, 200, { items }) ?? true;
+    const items = [];
+    for (const id of set) {
+      const it = await itemById(Number(id));
+      if (it) items.push(it);
+      else {
+        const stub = ITEM_DB.find((x) => x.id === id);
+        if (stub) items.push(stub);
+      }
+    }
+    return sendJson(res, 200, { items });
   }
 
   if (req.method === "POST" && p === "/api/account/wishlist") {
     if (!requireAuth()) return true;
     const body = await readBody(req);
     const id = Number(body.itemId);
-    if (!ITEM_DB.find((it) => it.id === id)) {
+    if (!Number.isFinite(id) || id <= 0) {
+      return sendJson(res, 400, { error: "invalid itemId" });
+    }
+    const fromDb = await itemById(id);
+    const fromFixture = ITEM_DB.find((x) => x.id === id);
+    if (!fromDb && !fromFixture) {
       return sendJson(res, 404, { error: "item not found" });
     }
     const set = wishlists.get(user.username) ?? new Set();
     set.add(id);
     wishlists.set(user.username, set);
-    return sendJson(res, 200, { ok: true }) ?? true;
+    return sendJson(res, 200, { ok: true });
   }
 
   const wmDel = p.match(/^\/api\/account\/wishlist\/(\d+)$/);

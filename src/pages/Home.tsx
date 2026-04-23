@@ -16,6 +16,7 @@ import {
   GuildCard,
   NewsCard,
   ServerStatusCard,
+  WorldEventsCard,
 } from "../components/HomeWidgets";
 
 type PlayStep =
@@ -266,8 +267,8 @@ export default function Home() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
+        <WorldEventsCard />
         <GuildCard guid="ebon-dawn" />
-        <GuildCard guid="silver-hand" />
       </div>
     </div>
   );

@@ -196,11 +196,24 @@ export interface Referral {
 export interface Item {
   id: number;
   name: string;
-  icon: string;
+  icon: string | null;
+  iconUrl?: string | null;
   quality: number;
   ilvl: number;
   type: string;
   setId: string | null;
+}
+
+export interface WorldEvent {
+  id: number;
+  title: string;
+  holidayId: number | null;
+  start: string;
+  end: string;
+  active: boolean;
+  recurs: boolean;
+  occurrenceMin: number;
+  lengthMin: number;
 }
 export interface ItemSource {
   type: "boss" | "quest" | "vendor";
@@ -286,6 +299,7 @@ export const api = {
     cmsPost<{ enabled: true }>("/api/account/2fa/verify", { code }),
   disable2fa: () => cmsPost<{ enabled: false }>("/api/account/2fa/disable"),
   shopSso: () => cmsGet<ShopSso>("/api/shop-sso"),
+  worldEvents: () => cmsGet<{ events: WorldEvent[] }>("/api/calendar/events"),
   submitTicket: (payload: Record<string, unknown>) =>
     cmsPost<{ id: string; url: string }>("/api/support/tickets", payload),
 };

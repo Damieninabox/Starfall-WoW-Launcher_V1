@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   api,
   type AffixesResponse,
@@ -6,6 +7,7 @@ import {
   type GuildEvent,
   type NewsEntry,
   type ServerStatus,
+  type WorldEvent,
 } from "../api/cms";
 
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
@@ -170,6 +172,73 @@ export function AffixesCard() {
               </div>
             ))}
           </div>
+        </div>
+      )}
+    </SectionCard>
+  );
+}
+
+export function WorldEventsCard() {
+  const [events, setEvents] = useState<WorldEvent[]>([]);
+  useEffect(() => {
+    api.worldEvents().then((r) => setEvents(r.events)).catch(() => {});
+  }, []);
+  const active = events.filter((e) => e.active).slice(0, 3);
+  const upcoming = events.filter((e) => !e.active).slice(0, 4);
+  return (
+    <SectionCard title="In-game calendar">
+      {events.length === 0 ? (
+        <div className="text-sm text-neutral-500">No scheduled events.</div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {active.length > 0 && (
+            <div>
+              <div className="mb-1 text-[10px] uppercase tracking-widest text-emerald-300">
+                Happening now
+              </div>
+              <ul className="flex flex-col gap-1">
+                {active.map((ev) => (
+                  <li
+                    key={`a-${ev.id}`}
+                    className="flex items-center justify-between rounded border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 text-xs"
+                  >
+                    <span className="truncate font-medium text-emerald-100">
+                      {ev.title}
+                    </span>
+                    <span className="whitespace-nowrap font-mono text-[10px] text-emerald-300">
+                      ends {new Date(ev.end).toLocaleDateString()}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {upcoming.length > 0 && (
+            <div>
+              <div className="mb-1 text-[10px] uppercase tracking-widest text-violet-300">
+                Upcoming
+              </div>
+              <ul className="flex flex-col gap-1 text-xs">
+                {upcoming.map((ev) => (
+                  <li
+                    key={`u-${ev.id}`}
+                    className="flex items-center justify-between gap-2"
+                  >
+                    <span className="truncate">{ev.title}</span>
+                    <span className="whitespace-nowrap font-mono text-neutral-500">
+                      {new Date(ev.start).toLocaleDateString()}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          <Link
+            to="/calendar"
+            className="self-start text-xs text-violet-300 hover:text-violet-200"
+          >
+            Full calendar →
+          </Link>
         </div>
       )}
     </SectionCard>

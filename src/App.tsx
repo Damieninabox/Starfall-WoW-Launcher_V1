@@ -8,6 +8,7 @@ import Shop from "./pages/Shop";
 import Settings from "./pages/Settings";
 import Vote from "./pages/Vote";
 import Changelog from "./pages/Changelog";
+import Calendar from "./pages/Calendar";
 import Transmog from "./pages/Transmog";
 import Addons from "./pages/Addons";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -18,6 +19,7 @@ const navItems = [
   { to: "/home", label: "Home" },
   { to: "/characters", label: "Characters" },
   { to: "/mythicplus", label: "Mythic+" },
+  { to: "/calendar", label: "Calendar" },
   { to: "/transmog", label: "Transmog" },
   { to: "/shop", label: "Shop" },
   { to: "/addons", label: "Addons" },
@@ -110,6 +112,7 @@ function AppRoutes() {
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/vote" element={<Vote />} />
                 <Route path="/changelog" element={<Changelog />} />
+                <Route path="/calendar" element={<Calendar />} />
                 <Route path="*" element={<Navigate to="/home" replace />} />
               </Routes>
             </Shell>
