@@ -255,7 +255,9 @@ function formatMoney(copper?: number): string {
   const gold = Math.floor(copper / 10000);
   const silver = Math.floor((copper % 10000) / 100);
   const cop = copper % 100;
-  if (gold > 0) return `${gold.toLocaleString()}g ${silver}s ${cop}c`;
+  // Force en-US so the thousands separator is a comma, not a thin-space
+  // (default German locale renders 215,135 as "215 135" which reads weirdly).
+  if (gold > 0) return `${gold.toLocaleString("en-US")}g ${silver}s ${cop}c`;
   if (silver > 0) return `${silver}s ${cop}c`;
   return `${cop}c`;
 }
