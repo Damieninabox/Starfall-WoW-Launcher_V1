@@ -841,6 +841,214 @@ export async function arenaLeaderboard(bracketType, limit = 100) {
   }
 }
 
+// --- site settings + admin ----------------------------------------------
+
+const DEFAULT_SETTINGS = {
+  admin_usernames: { value: "ELETHERYA", type: "string", category: "launcher", label: "Admin usernames", description: "Comma-separated list of account usernames with admin access to the launcher panel." },
+  current_patch: { value: "4.3.4", type: "string", category: "launcher", label: "Current content patch", description: "Currently active content patch (4.0.6, 4.1, 4.2, 4.3.4). Filters raid progression and other content." },
+};
+
+export async function seedLauncherSettings() {
+  if (!dbEnabled()) return;
+  for (const [key, def] of Object.entries(DEFAULT_SETTINGS)) {
+    try {
+      await pool.query(
+        `INSERT IGNORE INTO \`${CONFIG.cmsDb}\`.site_settings
+         (\`key\`, value, type, category, label, description, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, NOW())`,
+        [key, def.value, def.type, def.category, def.label, def.description],
+      );
+    } catch (e) { console.warn(`[db] seed setting ${key}:`, e.message); }
+  }
+}
+
+export async function getSetting(key) {
+  if (!dbEnabled()) return DEFAULT_SETTINGS[key]?.value ?? null;
+  try {
+    const rows = await q(
+      `SELECT value FROM \`${CONFIG.cmsDb}\`.site_settings WHERE \`key\` = ? LIMIT 1`,
+      [key],
+    );
+    return rows[0]?.value ?? DEFAULT_SETTINGS[key]?.value ?? null;
+  } catch (e) { console.warn("[db] getSetting:", e.message); return null; }
+}
+
+export async function getAllSettings() {
+  if (!dbEnabled()) return null;
+  try {
+    return await q(
+      `SELECT \`key\`, value, type, category, label, description, updated_at
+       FROM \`${CONFIG.cmsDb}\`.site_settings
+       ORDER BY category, \`key\``,
+    );
+  } catch (e) { console.warn("[db] getAllSettings:", e.message); return null; }
+}
+
+export async function setSetting(key, value) {
+  if (!dbEnabled()) return null;
+  try {
+    const [existing] = await pool.query(
+      `SELECT \`key\` FROM \`${CONFIG.cmsDb}\`.site_settings WHERE \`key\` = ? LIMIT 1`,
+      [key],
+    );
+    if (existing.length === 0) {
+      const def = DEFAULT_SETTINGS[key];
+      if (!def) return { error: "unknown setting" };
+      await pool.query(
+        `INSERT INTO \`${CONFIG.cmsDb}\`.site_settings
+         (\`key\`, value, type, category, label, description, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, NOW())`,
+        [key, String(value), def.type, def.category, def.label, def.description],
+      );
+    } else {
+      await pool.query(
+        `UPDATE \`${CONFIG.cmsDb}\`.site_settings
+         SET value = ?, updated_at = NOW() WHERE \`key\` = ?`,
+        [String(value), key],
+      );
+    }
+    return { ok: true };
+  } catch (e) { console.warn("[db] setSetting:", e.message); return null; }
+}
+
+export async function isAdminUsername(username) {
+  if (!username) return false;
+  const raw = await getSetting("admin_usernames");
+  if (!raw) return false;
+  const admins = String(raw)
+    .split(/[,\s]+/)
+    .map((s) => s.trim().toUpperCase())
+    .filter(Boolean);
+  return admins.includes(String(username).toUpperCase());
+}
+
+// --- raid progression ---------------------------------------------------
+
+// Cata raid achievement IDs → (raid, tier, boss, order).
+// The "boss kill" achievements live in character_achievement. First to get
+// each gives us the first-kill date + character; join guild_member to
+// attribute the kill to a guild.
+const CATA_RAIDS = [
+  {
+    raid: "Blackwing Descent", tier: "T11", patch: "4.0.6", order: 1,
+    bosses: [
+      { name: "Magmaw", achievementId: 4846 },
+      { name: "Omnotron Defense System", achievementId: 4847 },
+      { name: "Maloriak", achievementId: 4848 },
+      { name: "Atramedes", achievementId: 4849 },
+      { name: "Chimaeron", achievementId: 4850 },
+      { name: "Nefarian", achievementId: 4852 },
+    ],
+  },
+  {
+    raid: "The Bastion of Twilight", tier: "T11", patch: "4.0.6", order: 2,
+    bosses: [
+      { name: "Halfus Wyrmbreaker", achievementId: 4839 },
+      { name: "Valiona & Theralion", achievementId: 4840 },
+      { name: "Ascendant Council", achievementId: 4841 },
+      { name: "Cho'gall", achievementId: 4842 },
+      { name: "Sinestra", achievementId: 5293 },
+    ],
+  },
+  {
+    raid: "Throne of the Four Winds", tier: "T11", patch: "4.0.6", order: 3,
+    bosses: [
+      { name: "Conclave of Wind", achievementId: 4844 },
+      { name: "Al'Akir", achievementId: 4845 },
+    ],
+  },
+  {
+    raid: "Firelands", tier: "T12", patch: "4.2", order: 4,
+    bosses: [
+      { name: "Beth'tilac", achievementId: 5809 },
+      { name: "Lord Rhyolith", achievementId: 5805 },
+      { name: "Alysrazor", achievementId: 5808 },
+      { name: "Shannox", achievementId: 5807 },
+      { name: "Baleroc", achievementId: 5811 },
+      { name: "Majordomo Staghelm", achievementId: 5810 },
+      { name: "Ragnaros", achievementId: 5816 },
+    ],
+  },
+  {
+    raid: "Dragon Soul", tier: "T13", patch: "4.3.4", order: 5,
+    bosses: [
+      { name: "Morchok", achievementId: 6108 },
+      { name: "Warlord Zon'ozz", achievementId: 6160 },
+      { name: "Yor'sahj the Unsleeping", achievementId: 6164 },
+      { name: "Hagara the Stormbinder", achievementId: 6161 },
+      { name: "Ultraxion", achievementId: 6162 },
+      { name: "Warmaster Blackhorn", achievementId: 6163 },
+      { name: "Spine of Deathwing", achievementId: 6076 },
+      { name: "Madness of Deathwing", achievementId: 6174 },
+    ],
+  },
+];
+
+const PATCH_ORDER = ["4.0.6", "4.1", "4.2", "4.3.4"];
+
+export async function raidProgression(currentPatch = "4.3.4") {
+  if (!dbEnabled()) return null;
+  try {
+    const allBossIds = CATA_RAIDS.flatMap((r) => r.bosses.map((b) => b.achievementId));
+    const [rows] = await pool.query(
+      `SELECT ca.achievement, MIN(ca.date) AS first_date, c.name AS first_char, g.name AS first_guild
+       FROM \`${CONFIG.charsDb}\`.character_achievement ca
+       JOIN \`${CONFIG.charsDb}\`.characters c ON c.guid = ca.guid
+       LEFT JOIN \`${CONFIG.charsDb}\`.guild_member gm ON gm.guid = c.guid
+       LEFT JOIN \`${CONFIG.charsDb}\`.guild g ON g.guildid = gm.guildid
+       WHERE ca.achievement IN (?)
+       GROUP BY ca.achievement`,
+      [allBossIds],
+    );
+    const firstKills = new Map();
+    for (const r of rows) {
+      firstKills.set(Number(r.achievement), {
+        date: new Date(Number(r.first_date) * 1000).toISOString().slice(0, 10),
+        guild: r.first_guild,
+        character: r.first_char,
+      });
+    }
+
+    const maxIdx = PATCH_ORDER.indexOf(currentPatch);
+    const cutoffIdx = maxIdx < 0 ? PATCH_ORDER.length - 1 : maxIdx;
+
+    return CATA_RAIDS.filter((r) => {
+      const rp = PATCH_ORDER.indexOf(r.patch);
+      return rp <= cutoffIdx;
+    }).map((r) => ({
+      raid: r.raid,
+      tier: r.tier,
+      patch: r.patch,
+      bosses: r.bosses.map((b) => {
+        const fk = firstKills.get(b.achievementId);
+        return {
+          name: b.name,
+          killed: !!fk,
+          firstKillGuild: fk?.guild ?? null,
+          firstKillDate: fk?.date ?? null,
+          firstKillCharacter: fk?.character ?? null,
+        };
+      }),
+    }));
+  } catch (e) { console.warn("[db] raidProgression:", e.message); return null; }
+}
+
+// --- top guilds ----------------------------------------------------------
+
+export async function topGuilds(limit = 4) {
+  if (!dbEnabled()) return null;
+  try {
+    return await q(
+      `SELECT g.guildid, g.name, g.motd,
+              (SELECT COUNT(*) FROM \`${CONFIG.charsDb}\`.guild_member WHERE guildid = g.guildid) AS member_count
+       FROM \`${CONFIG.charsDb}\`.guild g
+       ORDER BY member_count DESC, g.guildid ASC
+       LIMIT ?`,
+      [limit],
+    );
+  } catch (e) { console.warn("[db] topGuilds:", e.message); return null; }
+}
+
 export async function shutdownDb() {
   if (pool) {
     await pool.end();

@@ -8,6 +8,7 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
   const location = useLocation();
   const username = useAuthStore((s) => s.username);
   const setAuthed = useAuthStore((s) => s.setAuthed);
+  const setAdmin = useAuthStore((s) => s.setAdmin);
   const clear = useAuthStore((s) => s.clear);
 
   const [checked, setChecked] = useState(false);
@@ -37,6 +38,13 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
             return;
           }
         }
+        // refresh admin flag on every protected render (cheap, single row)
+        try {
+          const a = await api.adminMe();
+          setAdmin(a.isAdmin);
+        } catch {
+          setAdmin(false);
+        }
         setTokenOk(true);
         setChecked(true);
       } catch {
@@ -45,7 +53,7 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
         setChecked(true);
       }
     })();
-  }, [clear, setAuthed, username]);
+  }, [clear, setAuthed, setAdmin, username]);
 
   if (!checked) {
     return <div className="p-6 text-sm text-neutral-500">Checking session…</div>;

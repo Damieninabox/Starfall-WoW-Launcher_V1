@@ -245,6 +245,45 @@ export function WorldEventsCard() {
   );
 }
 
+export function TopGuildsCard() {
+  const [guilds, setGuilds] = useState<
+    { guildId: number; name: string; motd: string; memberCount: number }[]
+  >([]);
+  useEffect(() => {
+    api.topGuilds().then((r) => setGuilds(r.guilds)).catch(() => setGuilds([]));
+  }, []);
+  return (
+    <SectionCard title="Top guilds">
+      {guilds.length === 0 ? (
+        <div className="text-sm text-neutral-500">No guilds tracked.</div>
+      ) : (
+        <ul className="flex flex-col gap-2">
+          {guilds.map((g) => (
+            <li
+              key={g.guildId}
+              className="flex items-baseline justify-between gap-3 border-b border-neutral-800 pb-2 last:border-b-0 last:pb-0"
+            >
+              <div className="min-w-0">
+                <div className="truncate text-sm font-semibold text-neutral-100">
+                  {g.name}
+                </div>
+                {g.motd && (
+                  <div className="truncate text-xs italic text-neutral-400">
+                    &ldquo;{g.motd}&rdquo;
+                  </div>
+                )}
+              </div>
+              <div className="whitespace-nowrap text-xs text-neutral-500">
+                {g.memberCount} members
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </SectionCard>
+  );
+}
+
 export function GuildCard({ guid }: { guid: string }) {
   const [g, setG] = useState<Guild | null>(null);
   const [events, setEvents] = useState<GuildEvent[]>([]);

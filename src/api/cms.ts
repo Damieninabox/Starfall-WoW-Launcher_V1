@@ -166,11 +166,13 @@ export interface AccountPoints {
 export interface RaidProgress {
   raid: string;
   tier: string;
+  patch?: string;
   bosses: {
     name: string;
     killed: boolean;
     firstKillGuild: string | null;
     firstKillDate: string | null;
+    firstKillCharacter?: string | null;
   }[];
 }
 export interface Guild {
@@ -312,7 +314,7 @@ export const api = {
     cmsPost<{ ok?: boolean; pointsAwarded?: number; error?: string; nextVoteMs?: number }>(
       `/api/vote/${siteId}/record`,
     ),
-  raids: () => cmsGet<{ raids: RaidProgress[] }>("/api/raids/progression"),
+  raids: () => cmsGet<{ raids: RaidProgress[]; currentPatch: string }>("/api/raids/progression"),
   addons: () => cmsGet<{ addons: Addon[] }>("/api/launcher/addons"),
   enroll2fa: () => cmsPost<Enroll2faResponse>("/api/account/2fa/enroll"),
   verify2fa: (code: string) =>
@@ -322,6 +324,27 @@ export const api = {
   worldEvents: () => cmsGet<{ events: WorldEvent[] }>("/api/calendar/events"),
   arena: (bracket: "2v2" | "3v3" | "5v5") =>
     cmsGet<{ teams: ArenaTeam[] }>(`/api/arena/${bracket}/leaderboard`),
+  launcherConfig: () =>
+    cmsGet<{ currentPatch: string; realmName: string }>("/api/launcher/config"),
+  topGuilds: () =>
+    cmsGet<{ guilds: { guildId: number; name: string; motd: string; memberCount: number }[] }>(
+      "/api/launcher/top-guilds",
+    ),
+  adminMe: () =>
+    cmsGet<{ isAdmin: boolean; username: string | null }>("/api/admin/me"),
+  adminSettings: () =>
+    cmsGet<{
+      settings: {
+        key: string;
+        value: string;
+        type: "string" | "number" | "boolean" | "json" | "html";
+        category: string;
+        label: string | null;
+        description: string | null;
+      }[];
+    }>("/api/admin/settings"),
+  adminSetSetting: (key: string, value: string | number | boolean) =>
+    cmsPost<{ ok: true }>("/api/admin/settings", { key, value }),
   submitTicket: (payload: Record<string, unknown>) =>
     cmsPost<{ id: string; url: string }>("/api/support/tickets", payload),
 };

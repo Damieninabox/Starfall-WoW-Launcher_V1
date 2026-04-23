@@ -21,6 +21,12 @@ import {
   worldEvents,
   itemSources as dbItemSources,
   arenaLeaderboard,
+  isAdminUsername,
+  getAllSettings,
+  getSetting,
+  setSetting,
+  raidProgression,
+  topGuilds,
   currentSeason,
   mplusWeeklyAffixes,
   mplusLeaderboard,
@@ -355,8 +361,16 @@ export async function handleCms(req, res, url) {
 
   if (req.method === "GET" && p === "/api/launcher/news") {
     const dbNews = await cmsNews(10);
-    if (dbNews && dbNews.length > 0) return sendJson(res, 200, { news: dbNews }) ?? true;
-    return sendJson(res, 200, { news: NEWS }) ?? true;
+    return sendJson(res, 200, { news: dbNews ?? [] });
+  }
+
+  if (req.method === "GET" && p === "/api/launcher/config") {
+    const currentPatch = await getSetting("current_patch");
+    const realmName = await getSetting("realm_name");
+    return sendJson(res, 200, {
+      currentPatch: currentPatch ?? "4.3.4",
+      realmName: realmName ?? "Starfall",
+    });
   }
 
   if (req.method === "GET" && p === "/api/launcher/server-status") {
@@ -693,7 +707,54 @@ export async function handleCms(req, res, url) {
 
   // raids
   if (req.method === "GET" && p === "/api/raids/progression") {
-    return sendJson(res, 200, { raids: RAIDS }) ?? true;
+    const patch = (await getSetting("current_patch")) ?? "4.3.4";
+    const live = await raidProgression(patch);
+    if (live) return sendJson(res, 200, { raids: live, currentPatch: patch });
+    return sendJson(res, 200, { raids: RAIDS, currentPatch: patch });
+  }
+
+  // top guilds (public)
+  if (req.method === "GET" && p === "/api/launcher/top-guilds") {
+    const guilds = await topGuilds(4);
+    return sendJson(res, 200, {
+      guilds: (guilds ?? []).map((g) => ({
+        guildId: Number(g.guildid),
+        name: g.name,
+        motd: g.motd ?? "",
+        memberCount: Number(g.member_count),
+      })),
+    });
+  }
+
+  // --- admin ---
+  const userObj = bearerUser(req);
+  const userIsAdmin = userObj ? await isAdminUsername(userObj.username) : false;
+  const requireAdmin = () => {
+    if (userIsAdmin) return true;
+    sendJson(res, 403, { error: "admin only" });
+    return false;
+  };
+
+  if (req.method === "GET" && p === "/api/admin/me") {
+    return sendJson(res, 200, { isAdmin: userIsAdmin, username: userObj?.username ?? null });
+  }
+
+  if (req.method === "GET" && p === "/api/admin/settings") {
+    if (!requireAdmin()) return true;
+    const rows = await getAllSettings();
+    return sendJson(res, 200, { settings: rows ?? [] });
+  }
+
+  if (req.method === "POST" && p === "/api/admin/settings") {
+    if (!requireAdmin()) return true;
+    const body = await readBody(req);
+    if (!body.key || body.value === undefined) {
+      return sendJson(res, 400, { error: "key and value required" });
+    }
+    const r = await setSetting(String(body.key), body.value);
+    if (!r) return sendJson(res, 500, { error: "db error" });
+    if (r.error) return sendJson(res, 400, r);
+    return sendJson(res, 200, { ok: true });
   }
 
   // tickets

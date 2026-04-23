@@ -3,13 +3,17 @@ import { api, type RaidProgress } from "../api/cms";
 
 export default function LeaderboardRaids() {
   const [raids, setRaids] = useState<RaidProgress[]>([]);
+  const [patch, setPatch] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     api
       .raids()
-      .then((r) => setRaids(r.raids))
+      .then((r) => {
+        setRaids(r.raids);
+        setPatch(r.currentPatch ?? "");
+      })
       .catch((e) => setError(String(e)))
       .finally(() => setLoading(false));
   }, []);
@@ -24,6 +28,17 @@ export default function LeaderboardRaids() {
 
   return (
     <div className="flex flex-col gap-6">
+      {patch && (
+        <div className="flex items-center gap-2 text-xs text-neutral-500">
+          <span>Content patch:</span>
+          <span className="rounded-full border border-violet-500/40 bg-violet-500/10 px-2 py-0.5 font-mono text-violet-200">
+            {patch}
+          </span>
+          <span className="text-neutral-600">
+            (showing raids from this patch and earlier)
+          </span>
+        </div>
+      )}
       {raids.length === 0 ? (
         <div className="rounded border border-dashed border-neutral-800 p-8 text-center text-sm text-neutral-500">
           No raid progression tracked yet.
@@ -41,7 +56,10 @@ export default function LeaderboardRaids() {
               <header className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
                 <div>
                   <div className="text-lg font-semibold">{r.raid}</div>
-                  <div className="text-xs text-neutral-500">{r.tier}</div>
+                  <div className="text-xs text-neutral-500">
+                    {r.tier}
+                    {r.patch && <span className="ml-2">· patch {r.patch}</span>}
+                  </div>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="h-1.5 w-32 overflow-hidden rounded-full bg-neutral-800">

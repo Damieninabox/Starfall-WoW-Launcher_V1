@@ -6,6 +6,7 @@ import {
   type MplusRun,
   type MplusSeason,
 } from "../api/cms";
+import { dungeonImage } from "../lib/icons";
 
 type Tab = "leaderboard" | "affixes" | "dungeons";
 
@@ -170,17 +171,33 @@ export default function MythicPlus() {
 
       {tab === "dungeons" && (
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-          {dungeons.map((d) => (
-            <div
-              key={d.mapId}
-              className="rounded-lg border border-neutral-800 bg-neutral-900/60 p-4"
-            >
-              <div className="text-sm font-semibold">{d.name}</div>
-              <div className="mt-1 text-xs text-neutral-500">
-                Time limit · {Math.floor(d.timeLimitSec / 60)}:{String(d.timeLimitSec % 60).padStart(2, "0")}
+          {dungeons.map((d) => {
+            const img = dungeonImage(d.name);
+            return (
+              <div
+                key={d.mapId}
+                className="group relative overflow-hidden rounded-lg border border-violet-500/20 bg-neutral-900/60"
+              >
+                {img && (
+                  <img
+                    src={img}
+                    alt=""
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).style.display = "none";
+                    }}
+                    className="h-32 w-full object-cover opacity-70 transition-opacity group-hover:opacity-100"
+                    draggable={false}
+                  />
+                )}
+                <div className="p-4">
+                  <div className="text-sm font-semibold">{d.name}</div>
+                  <div className="mt-1 text-xs text-neutral-500">
+                    Time limit · {Math.floor(d.timeLimitSec / 60)}:{String(d.timeLimitSec % 60).padStart(2, "0")}
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
           {dungeons.length === 0 && (
             <div className="col-span-full text-sm text-neutral-500">
               No dungeons configured.

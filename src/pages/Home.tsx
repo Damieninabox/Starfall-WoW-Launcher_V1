@@ -13,9 +13,9 @@ import { useInstallerStore } from "../state/installer";
 import { useAuthStore } from "../state/auth";
 import {
   AffixesCard,
-  GuildCard,
   NewsCard,
   ServerStatusCard,
+  TopGuildsCard,
   WorldEventsCard,
 } from "../components/HomeWidgets";
 
@@ -268,7 +268,7 @@ export default function Home() {
 
       <div className="grid gap-4 md:grid-cols-2">
         <WorldEventsCard />
-        <GuildCard guid="ebon-dawn" />
+        <TopGuildsCard />
       </div>
     </div>
   );

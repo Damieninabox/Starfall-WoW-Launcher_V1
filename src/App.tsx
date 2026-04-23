@@ -14,6 +14,7 @@ import Changelog from "./pages/Changelog";
 import Calendar from "./pages/Calendar";
 import Transmog from "./pages/Transmog";
 import Addons from "./pages/Addons";
+import Admin from "./pages/Admin";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Starfield from "./components/Starfield";
 import { useAuthStore } from "./state/auth";
@@ -37,6 +38,7 @@ const secondary = [
 
 function Shell({ children }: { children: React.ReactNode }) {
   const displayName = useAuthStore((s) => s.displayName);
+  const isAdmin = useAuthStore((s) => s.isAdmin);
   return (
     <div className="flex h-full flex-col">
       <header className="flex flex-wrap items-center gap-4 border-b border-violet-500/20 bg-[#0c0f1f]/75 px-6 py-3 backdrop-blur">
@@ -64,6 +66,21 @@ function Shell({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
         <div className="ml-auto flex items-center gap-3 text-xs text-neutral-500">
+          {isAdmin && (
+            <NavLink
+              to="/admin"
+              className={({ isActive }) =>
+                [
+                  "rounded px-2 py-1",
+                  isActive
+                    ? "bg-violet-500/20 text-violet-200"
+                    : "text-violet-300 hover:bg-violet-500/10 hover:text-violet-200",
+                ].join(" ")
+              }
+            >
+              Admin
+            </NavLink>
+          )}
           <div className="flex gap-2">
             {secondary.map((item) => (
               <NavLink
@@ -121,6 +138,7 @@ function AppRoutes() {
                 <Route path="/vote" element={<Vote />} />
                 <Route path="/changelog" element={<Changelog />} />
                 <Route path="/calendar" element={<Calendar />} />
+                <Route path="/admin" element={<Admin />} />
                 <Route path="*" element={<Navigate to="/home" replace />} />
               </Routes>
             </Shell>

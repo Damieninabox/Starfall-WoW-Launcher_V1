@@ -5,10 +5,12 @@ import crypto from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { handleCms } from "./cms.js";
-import { initDb } from "./db.js";
+import { initDb, seedLauncherSettings } from "./db.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const FILES_DIR = path.join(__dirname, "files");
+const CMS_IMAGES_DIR =
+  process.env.CMS_IMAGES_DIR ?? "C:\\Starfall-WoW-CMS\\public\\images";
 const PORT = 8787;
 const HOST = "127.0.0.1";
 const MANIFEST_VERSION = "2026.04.22";
@@ -153,8 +155,44 @@ async function serveFile(req, res, relPath) {
   fs.createReadStream(filePath).pipe(res);
 }
 
+async function serveImage(req, res, relPath) {
+  const safeRel = path.normalize(decodeURIComponent(relPath)).replace(/^[/\\]+/, "");
+  if (safeRel.includes("..")) {
+    res.writeHead(400).end("bad path");
+    return;
+  }
+  const full = path.join(CMS_IMAGES_DIR, safeRel);
+  if (!full.startsWith(CMS_IMAGES_DIR)) {
+    res.writeHead(400).end("bad path");
+    return;
+  }
+  let stat;
+  try {
+    stat = await fsp.stat(full);
+  } catch {
+    res.writeHead(404).end("image not found");
+    return;
+  }
+  const ext = path.extname(full).toLowerCase();
+  const type =
+    ext === ".svg" ? "image/svg+xml"
+    : ext === ".png" ? "image/png"
+    : ext === ".jpg" || ext === ".jpeg" ? "image/jpeg"
+    : ext === ".webp" ? "image/webp"
+    : "application/octet-stream";
+  res.writeHead(200, {
+    "content-type": type,
+    "content-length": stat.size,
+    "cache-control": "public, max-age=86400",
+    "access-control-allow-origin": "*",
+  });
+  if (req.method === "HEAD") { res.end(); return; }
+  fs.createReadStream(full).pipe(res);
+}
+
 async function main() {
   await initDb();
+  await seedLauncherSettings();
   await ensureFiles();
   let manifest = await buildManifest();
   console.log(`[mock] manifest ready (${manifest.files.length} files, version ${manifest.version})`);
@@ -168,6 +206,10 @@ async function main() {
       }
       if ((req.method === "GET" || req.method === "HEAD") && url.pathname.startsWith("/files/")) {
         await serveFile(req, res, url.pathname.slice("/files/".length));
+        return;
+      }
+      if ((req.method === "GET" || req.method === "HEAD") && url.pathname.startsWith("/images/")) {
+        await serveImage(req, res, url.pathname.slice("/images/".length));
         return;
       }
       if (req.method === "POST" && url.pathname === "/_regenerate") {
