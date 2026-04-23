@@ -148,17 +148,61 @@ pub async fn realmlist_write(
     for (name, _) in &locales {
         let rel = format!("Data/{name}/realmlist.wtf");
         let target = assert_inside(&root, &rel)?;
-        // UTF-8 no BOM + LF. We write `payload` literally — no formatter
-        // touches it, so no CRLF on Windows.
         std::fs::write(&target, payload.as_bytes())
             .map_err(|e| RealmlistError::WriteIo(format!("{}: {e}", target.display())))?;
         paths.push(target.to_string_lossy().to_string());
     }
+
+    // Also patch WTF/Config.wtf — the client character select uses
+    // `SET realmList "host"` from here, which overrides Data/<loc>/realmlist.wtf
+    // for some flows. Upsert the line; leave every other line untouched.
+    if let Ok(cfg_path) = assert_inside(&root, "WTF/Config.wtf") {
+        if let Err(e) = upsert_config_realmlist(&cfg_path, &server) {
+            // non-fatal: if WTF/ doesn't exist yet (player has never launched),
+            // the Data/ files alone are enough for the first login.
+            tracing::warn!(err = %e, "WTF/Config.wtf upsert skipped");
+        } else {
+            paths.push(cfg_path.to_string_lossy().to_string());
+        }
+    }
+
     Ok(RealmlistState {
         locales: locales.into_iter().map(|(n, _)| n).collect(),
         server: Some(server),
         paths,
     })
+}
+
+fn upsert_config_realmlist(path: &std::path::Path, server: &str) -> Result<(), std::io::Error> {
+    let line = format!("SET realmList \"{server}\"");
+    if !path.exists() {
+        // create the file with just the one setting; WoW will add its
+        // defaults next time it runs.
+        let content = format!("{line}\n");
+        return std::fs::write(path, content.as_bytes());
+    }
+    let existing = std::fs::read_to_string(path)?;
+    let mut found = false;
+    let mut out = String::with_capacity(existing.len() + line.len());
+    for raw in existing.lines() {
+        let trimmed = raw.trim_start();
+        if !found
+            && (trimmed.starts_with("SET realmList ")
+                || trimmed.starts_with("SET realmlist "))
+        {
+            out.push_str(&line);
+            out.push('\n');
+            found = true;
+        } else {
+            out.push_str(raw);
+            out.push('\n');
+        }
+    }
+    if !found {
+        out.push_str(&line);
+        out.push('\n');
+    }
+    std::fs::write(path, out.as_bytes())
 }
 
 #[cfg(test)]

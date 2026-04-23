@@ -207,6 +207,7 @@ export interface Item {
 export interface WorldEvent {
   id: number;
   title: string;
+  subtitle?: string | null;
   holidayId: number | null;
   start: string;
   end: string;
@@ -214,6 +215,25 @@ export interface WorldEvent {
   recurs: boolean;
   occurrenceMin: number;
   lengthMin: number;
+}
+
+export interface ArenaMember {
+  guid: number;
+  name: string;
+  className: string;
+  race: string;
+  personalRating: number;
+}
+export interface ArenaTeam {
+  teamId: number;
+  name: string;
+  bracket: "2v2" | "3v3" | "5v5";
+  rating: number;
+  seasonGames: number;
+  seasonWins: number;
+  winRate: number;
+  rank: number;
+  members: ArenaMember[];
 }
 export interface ItemSource {
   type: "boss" | "quest" | "vendor";
@@ -300,6 +320,8 @@ export const api = {
   disable2fa: () => cmsPost<{ enabled: false }>("/api/account/2fa/disable"),
   shopSso: () => cmsGet<ShopSso>("/api/shop-sso"),
   worldEvents: () => cmsGet<{ events: WorldEvent[] }>("/api/calendar/events"),
+  arena: (bracket: "2v2" | "3v3" | "5v5") =>
+    cmsGet<{ teams: ArenaTeam[] }>(`/api/arena/${bracket}/leaderboard`),
   submitTicket: (payload: Record<string, unknown>) =>
     cmsPost<{ id: string; url: string }>("/api/support/tickets", payload),
 };

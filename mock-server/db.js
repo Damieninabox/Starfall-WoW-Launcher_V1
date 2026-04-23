@@ -680,6 +680,12 @@ function decodePackedDate(v) {
   return Date.UTC(year, month, day, hour, minute);
 }
 
+// Darkmoon Faire ran in three locations pre-Cata (Elwynn / Mulgore / Shattrath)
+// rotating monthly. holiday_dates stores them as three separate ids but they
+// really represent one rolling "Darkmoon Faire" event. Merge them in the UI.
+const DARKMOON_IDS = new Set([374, 375, 376]);
+const DARKMOON_LOCATION = { 374: "Elwynn Forest", 375: "Mulgore", 376: "Shattrath" };
+
 export async function worldEvents(limit = 40) {
   if (!dbEnabled()) return null;
   try {
@@ -700,15 +706,17 @@ export async function worldEvents(limit = 40) {
 
       if (endMs < now) continue; // past, skip
 
+      const isDmf = DARKMOON_IDS.has(hid);
       out.push({
         id: hid * 100 + Number(row.date_id),
-        title: meta?.name ?? `Holiday #${hid}`,
+        title: isDmf ? "Darkmoon Faire" : (meta?.name ?? `Holiday #${hid}`),
+        subtitle: isDmf ? DARKMOON_LOCATION[hid] : null,
         holidayId: hid,
         start: new Date(startMs).toISOString(),
         end: new Date(endMs).toISOString(),
         active: now >= startMs && now < endMs,
         recurs: true,
-        occurrenceMin: 525600, // annual default; informational only
+        occurrenceMin: 525600,
         lengthMin: durMin,
       });
     }
@@ -721,6 +729,114 @@ export async function worldEvents(limit = 40) {
     return out.slice(0, limit);
   } catch (e) {
     console.warn("[db] worldEvents:", e.message);
+    return null;
+  }
+}
+
+// --- item sources (world DB) --------------------------------------------
+
+export async function itemSources(itemEntry) {
+  if (!dbEnabled()) return null;
+  try {
+    const sources = [];
+    // Creature drops
+    const drops = await q(
+      `SELECT ct.entry, ct.name, ct.minlevel, ct.maxlevel, ct.rank,
+              clt.ChanceOrQuestChance AS chance
+       FROM \`${CONFIG.worldDb}\`.creature_loot_template clt
+       JOIN \`${CONFIG.worldDb}\`.creature_template ct ON ct.lootid = clt.entry
+       WHERE clt.item = ?
+       ORDER BY ct.rank DESC, ct.maxlevel DESC
+       LIMIT 20`,
+      [itemEntry],
+    );
+    for (const r of drops) {
+      sources.push({
+        type: Number(r.rank) >= 3 ? "boss" : "mob",
+        name: r.name,
+        zone: `Lv ${r.minlevel}-${r.maxlevel}`,
+        dropChance: Number(r.chance) > 0 ? Number(r.chance) : null,
+      });
+    }
+    // Vendors
+    const vendors = await q(
+      `SELECT DISTINCT ct.entry, ct.name, ct.minlevel
+       FROM \`${CONFIG.worldDb}\`.npc_vendor nv
+       JOIN \`${CONFIG.worldDb}\`.creature_template ct ON ct.entry = nv.entry
+       WHERE nv.item = ?
+       LIMIT 5`,
+      [itemEntry],
+    );
+    for (const r of vendors) {
+      sources.push({
+        type: "vendor",
+        name: r.name,
+        zone: `Lv ${r.minlevel ?? "?"}`,
+        dropChance: null,
+      });
+    }
+    return sources;
+  } catch (e) {
+    console.warn("[db] itemSources:", e.message);
+    return null;
+  }
+}
+
+// --- Arena leaderboards -------------------------------------------------
+
+const ARENA_BRACKETS = { 2: "2v2", 3: "3v3", 5: "5v5" };
+
+export async function arenaLeaderboard(bracketType, limit = 100) {
+  if (!dbEnabled()) return null;
+  try {
+    const rows = await q(
+      `SELECT at.arenaTeamId, at.name, at.rating, at.seasonGames,
+              at.seasonWins, at.rank, at.type
+       FROM \`${CONFIG.charsDb}\`.arena_team at
+       WHERE at.type = ?
+       ORDER BY at.rating DESC, at.seasonWins DESC
+       LIMIT ?`,
+      [bracketType, limit],
+    );
+    if (rows.length === 0) return [];
+    const teamIds = rows.map((r) => Number(r.arenaTeamId));
+    const members = await q(
+      `SELECT atm.arenaTeamId, atm.guid, atm.personalRating,
+              c.name, c.class, c.race
+       FROM \`${CONFIG.charsDb}\`.arena_team_member atm
+       JOIN \`${CONFIG.charsDb}\`.characters c ON c.guid = atm.guid
+       WHERE atm.arenaTeamId IN (?)`,
+      [teamIds],
+    );
+    const memberByTeam = new Map();
+    for (const m of members) {
+      const tid = Number(m.arenaTeamId);
+      if (!memberByTeam.has(tid)) memberByTeam.set(tid, []);
+      memberByTeam.get(tid).push({
+        guid: Number(m.guid),
+        name: m.name,
+        className: CLASS_NAMES[m.class] ?? `Class ${m.class}`,
+        race: RACE_NAMES[m.race] ?? `Race ${m.race}`,
+        personalRating: Number(m.personalRating),
+      });
+    }
+    return rows.map((r) => {
+      const games = Number(r.seasonGames);
+      const wins = Number(r.seasonWins);
+      return {
+        teamId: Number(r.arenaTeamId),
+        name: r.name,
+        bracket: ARENA_BRACKETS[Number(r.type)] ?? `${r.type}v${r.type}`,
+        rating: Number(r.rating),
+        seasonGames: games,
+        seasonWins: wins,
+        winRate: games > 0 ? Math.round((wins / games) * 100) : 0,
+        rank: Number(r.rank),
+        members: memberByTeam.get(Number(r.arenaTeamId)) ?? [],
+      };
+    });
+  } catch (e) {
+    console.warn("[db] arenaLeaderboard:", e.message);
     return null;
   }
 }

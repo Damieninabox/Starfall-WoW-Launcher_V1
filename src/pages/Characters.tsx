@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, type Character } from "../api/cms";
+import { classIcon, raceIcon, CURRENCY_ICONS } from "../lib/icons";
 
 const FACTION_COLORS: Record<Character["faction"], string> = {
   Alliance: "text-sky-300",
@@ -55,21 +56,31 @@ export default function Characters() {
             <ul className="flex flex-col gap-2">
               {list.map((c) => {
                 const isSel = selected?.id === c.id;
+                const clsIco = classIcon(c.className);
+                const raceIco = raceIcon(c.race, c.gender);
                 return (
                   <li key={c.id}>
                     <button
                       onClick={() => setSelected(c)}
                       className={[
-                        "flex w-full flex-col items-start gap-0.5 rounded border p-3 text-left transition-colors",
+                        "flex w-full flex-col items-start gap-1 rounded border p-3 text-left transition-colors",
                         isSel
                           ? "border-violet-500 bg-violet-500/10"
                           : "border-neutral-800 bg-neutral-900/60 hover:border-neutral-700",
                       ].join(" ")}
                     >
-                      <div className="flex w-full items-baseline justify-between gap-2">
-                        <span className={["font-semibold", CLASS_COLORS[c.className] ?? ""].join(" ")}>
-                          {c.name}
-                        </span>
+                      <div className="flex w-full items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          {raceIco && (
+                            <img src={raceIco} alt="" className="h-5 w-5 rounded" draggable={false} />
+                          )}
+                          {clsIco && (
+                            <img src={clsIco} alt="" className="h-5 w-5 rounded" draggable={false} />
+                          )}
+                          <span className={["font-semibold", CLASS_COLORS[c.className] ?? ""].join(" ")}>
+                            {c.name}
+                          </span>
+                        </div>
                         <span className={["text-xs", FACTION_COLORS[c.faction]].join(" ")}>
                           {c.faction}
                         </span>
@@ -100,10 +111,18 @@ export default function Characters() {
 
 function CharacterDetail({ c }: { c: Character }) {
   const classColor = CLASS_COLORS[c.className] ?? "text-neutral-100";
+  const clsIco = classIcon(c.className);
+  const raceIco = raceIcon(c.race, c.gender);
+  const honorIcon =
+    c.faction === "Horde" ? CURRENCY_ICONS.honorHorde : CURRENCY_ICONS.honorAlliance;
   return (
     <div className="flex flex-col gap-6">
       <header>
-        <div className="flex flex-wrap items-baseline gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2">
+            {raceIco && <img src={raceIco} alt="" className="h-10 w-10 rounded" draggable={false} />}
+            {clsIco && <img src={clsIco} alt="" className="h-10 w-10 rounded" draggable={false} />}
+          </div>
           <h2 className={["text-3xl font-semibold tracking-tight", classColor].join(" ")}>
             {c.name}
           </h2>
@@ -116,7 +135,7 @@ function CharacterDetail({ c }: { c: Character }) {
             </span>
           )}
         </div>
-        <div className="mt-1 text-sm text-neutral-400">
+        <div className="mt-2 text-sm text-neutral-400">
           Level {c.level} {c.race} {c.className}
           {c.gender ? ` · ${c.gender}` : ""}
         </div>
@@ -128,10 +147,10 @@ function CharacterDetail({ c }: { c: Character }) {
       </header>
 
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label="Gold" value={formatMoney(c.money)} />
-        <Stat label="Honor" value={numberFmt(c.honorPoints)} />
-        <Stat label="HKs" value={numberFmt(c.totalKills)} />
-        <Stat label="Played" value={formatPlayed(c.totalPlayedSec)} />
+        <Stat label="Gold" value={formatMoney(c.money)} iconUrl={CURRENCY_ICONS.gold} />
+        <Stat label="Honor" value={numberFmt(c.honorPoints)} iconUrl={honorIcon} />
+        <Stat label="HKs" value={numberFmt(c.totalKills)} iconUrl={CURRENCY_ICONS.kills} />
+        <Stat label="Played" value={formatPlayed(c.totalPlayedSec)} iconUrl={CURRENCY_ICONS.played} />
       </section>
 
       <section className="text-xs text-neutral-500">
@@ -141,11 +160,21 @@ function CharacterDetail({ c }: { c: Character }) {
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Stat({ label, value, iconUrl }: { label: string; value: string; iconUrl?: string }) {
   return (
-    <div className="rounded-lg border border-neutral-800 bg-neutral-950/60 p-3">
-      <div className="text-[10px] uppercase tracking-widest text-neutral-500">{label}</div>
-      <div className="mt-1 font-mono text-lg text-neutral-100">{value}</div>
+    <div className="flex items-center gap-3 rounded-lg border border-neutral-800 bg-neutral-950/60 p-3">
+      {iconUrl && (
+        <img
+          src={iconUrl}
+          alt=""
+          className="h-8 w-8 rounded ring-1 ring-neutral-800"
+          draggable={false}
+        />
+      )}
+      <div className="min-w-0 flex-1">
+        <div className="text-[10px] uppercase tracking-widest text-neutral-500">{label}</div>
+        <div className="mt-0.5 font-mono text-lg text-neutral-100 truncate">{value}</div>
+      </div>
     </div>
   );
 }

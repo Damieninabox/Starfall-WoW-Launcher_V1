@@ -4,6 +4,9 @@ import Home from "./pages/Home";
 import Install from "./pages/Install";
 import Characters from "./pages/Characters";
 import MythicPlus from "./pages/MythicPlus";
+import Leaderboards from "./pages/Leaderboards";
+import LeaderboardPvP from "./pages/LeaderboardPvP";
+import LeaderboardRaids from "./pages/LeaderboardRaids";
 import Shop from "./pages/Shop";
 import Settings from "./pages/Settings";
 import Vote from "./pages/Vote";
@@ -18,7 +21,7 @@ import { useAuthStore } from "./state/auth";
 const navItems = [
   { to: "/home", label: "Home" },
   { to: "/characters", label: "Characters" },
-  { to: "/mythicplus", label: "Mythic+" },
+  { to: "/leaderboards", label: "Leaderboards" },
   { to: "/calendar", label: "Calendar" },
   { to: "/transmog", label: "Transmog" },
   { to: "/shop", label: "Shop" },
@@ -104,7 +107,12 @@ function AppRoutes() {
                 <Route path="/" element={<Navigate to="/home" replace />} />
                 <Route path="/home" element={<Home />} />
                 <Route path="/characters" element={<Characters />} />
-                <Route path="/mythicplus" element={<MythicPlus />} />
+                <Route path="/leaderboards" element={<Leaderboards />}>
+                  <Route path="mythicplus" element={<MythicPlus />} />
+                  <Route path="pvp" element={<LeaderboardPvP />} />
+                  <Route path="raids" element={<LeaderboardRaids />} />
+                </Route>
+                <Route path="/mythicplus" element={<Navigate to="/leaderboards/mythicplus" replace />} />
                 <Route path="/transmog" element={<Transmog />} />
                 <Route path="/shop" element={<Shop />} />
                 <Route path="/addons" element={<Addons />} />

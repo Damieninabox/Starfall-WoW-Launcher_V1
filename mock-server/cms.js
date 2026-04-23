@@ -19,6 +19,8 @@ import {
   cmsAccountPoints,
   cmsRecordVote,
   worldEvents,
+  itemSources as dbItemSources,
+  arenaLeaderboard,
   currentSeason,
   mplusWeeklyAffixes,
   mplusLeaderboard,
@@ -569,8 +571,18 @@ export async function handleCms(req, res, url) {
 
   const itemSourcesMatch = p.match(/^\/api\/items\/(\d+)\/sources$/);
   if (req.method === "GET" && itemSourcesMatch) {
+    const entry = Number(itemSourcesMatch[1]);
+    const live = await dbItemSources(entry);
+    if (live !== null) return sendJson(res, 200, { sources: live });
     const srcs = ITEM_SOURCES[itemSourcesMatch[1]] ?? [];
-    return sendJson(res, 200, { sources: srcs }) ?? true;
+    return sendJson(res, 200, { sources: srcs });
+  }
+
+  const arenaMatch = p.match(/^\/api\/arena\/(2v2|3v3|5v5)\/leaderboard$/);
+  if (req.method === "GET" && arenaMatch) {
+    const t = arenaMatch[1] === "5v5" ? 5 : arenaMatch[1] === "3v3" ? 3 : 2;
+    const rows = await arenaLeaderboard(t, 100);
+    return sendJson(res, 200, { teams: rows ?? [] });
   }
 
   // armory
