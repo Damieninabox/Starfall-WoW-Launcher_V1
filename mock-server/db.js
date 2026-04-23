@@ -625,74 +625,94 @@ export async function guildEvents(guildId) {
 
 // --- in-game calendar ----------------------------------------------------
 
-// Compute the next occurrence of a recurring game_event row.
-// TC's `occurence` is the repeat period in minutes (0 == one-shot);
-// `length` is the active duration in minutes; `start_time`/`end_time`
-// bracket the valid window.
-function nextOccurrence(row, now) {
-  const start = new Date(row.start_time).getTime();
-  const end = new Date(row.end_time).getTime();
-  const occurMin = Number(row.occurence ?? 0);
-  const lenMin = Number(row.length ?? 0);
-  const lenMs = lenMin * 60_000;
+// Holiday metadata mirroring Holidays.dbc + SharedDefines.h constants. The
+// DBC itself isn't in the MySQL tables; holiday_dates just overrides the
+// Date[] array. Name and default duration come from this table; when
+// holiday_dates.holiday_duration is non-zero it wins.
+// Duration is in minutes (Blizzard default per-holiday "Duration[0]" value).
+const HOLIDAYS = {
+  62:  { name: "Fireworks Spectacular",       durationMin: 60 },
+  141: { name: "Feast of Winter Veil",        durationMin: 24240 }, // 17 days
+  181: { name: "Noblegarden",                 durationMin: 10080 }, // 7 days
+  201: { name: "Children's Week",             durationMin: 10080 }, // 7 days
+  283: { name: "Call to Arms: Alterac Valley",durationMin: 5760 },  // 4 days
+  284: { name: "Call to Arms: Warsong Gulch", durationMin: 5760 },
+  285: { name: "Call to Arms: Arathi Basin",  durationMin: 5760 },
+  301: { name: "Stranglethorn Fishing Extravaganza", durationMin: 180 },
+  321: { name: "Harvest Festival",            durationMin: 10080 },
+  324: { name: "Hallow's End",                durationMin: 20160 }, // 14 days
+  327: { name: "Lunar Festival",              durationMin: 20160 }, // 14 days
+  335: { name: "Love is in the Air",          durationMin: 20160 }, // legacy id
+  341: { name: "Midsummer Fire Festival",     durationMin: 20160 }, // 14 days
+  353: { name: "Call to Arms: Eye of the Storm", durationMin: 5760 },
+  372: { name: "Brewfest",                    durationMin: 20160 }, // 14 days
+  374: { name: "Darkmoon Faire (Elwynn)",     durationMin: 10080 }, // 7 days
+  375: { name: "Darkmoon Faire (Mulgore)",    durationMin: 10080 },
+  376: { name: "Darkmoon Faire (Shattrath)",  durationMin: 10080 },
+  398: { name: "Pirates' Day",                durationMin: 1440 },  // 1 day
+  400: { name: "Call to Arms: Strand of the Ancients", durationMin: 5760 },
+  404: { name: "Pilgrim's Bounty",            durationMin: 10080 },
+  406: { name: "Wrath Launch",                durationMin: 1440 },
+  409: { name: "Day of the Dead",             durationMin: 2880 },  // 2 days
+  420: { name: "Call to Arms: Isle of Conquest", durationMin: 5760 },
+  423: { name: "Love is in the Air",          durationMin: 10080 }, // 7 days
+  424: { name: "Kalu'ak Fishing Derby",       durationMin: 60 },
+  435: { name: "Call to Arms: Battle for Gilneas", durationMin: 5760 },
+  436: { name: "Call to Arms: Twin Peaks",    durationMin: 5760 },
+  479: { name: "Darkmoon Faire (Terokkar)",   durationMin: 10080 },
+};
 
-  if (!Number.isFinite(start)) return null;
-  if (now > end) return null;
-
-  if (occurMin === 0) {
-    return {
-      start,
-      end: start + lenMs,
-      active: now >= start && now < start + lenMs,
-    };
-  }
-
-  if (now < start) {
-    return { start, end: start + lenMs, active: false };
-  }
-
-  const occurMs = occurMin * 60_000;
-  const cycles = Math.floor((now - start) / occurMs);
-  const curStart = start + cycles * occurMs;
-  const curEnd = curStart + lenMs;
-
-  if (now < curEnd && curStart <= end) {
-    return { start: curStart, end: curEnd, active: true };
-  }
-  const nextStart = curStart + occurMs;
-  if (nextStart > end) return null;
-  return { start: nextStart, end: nextStart + lenMs, active: false };
+// Decode TC's AppendPackedTime format (see ByteBuffer.cpp):
+//   bits 0-5  : minute
+//   bits 6-10 : hour
+//   bits 11-13: weekday (ignored on decode)
+//   bits 14-19: day-of-month (0-indexed -> +1)
+//   bits 20-23: month (0-indexed)
+//   bits 24-28: year offset (-> year = offset + 2000)
+function decodePackedDate(v) {
+  const minute = v & 0x3F;
+  const hour = (v >> 6) & 0x1F;
+  const day = ((v >> 14) & 0x3F) + 1;
+  const month = (v >> 20) & 0xF;
+  const year = ((v >> 24) & 0x1F) + 2000;
+  // The server packed using localtime, but without knowing the server TZ we
+  // construct a UTC date. Players in other timezones see a small shift.
+  return Date.UTC(year, month, day, hour, minute);
 }
 
 export async function worldEvents(limit = 40) {
   if (!dbEnabled()) return null;
   try {
     const rows = await q(
-      `SELECT entry, start_time, end_time, occurence, length, holiday,
-              description, world_event, announce
-       FROM \`${CONFIG.worldDb}\`.game_event
-       WHERE world_event = 0
-         AND description <> ''
-         AND description IS NOT NULL`,
+      `SELECT id AS holidayId, date_id, date_value, holiday_duration
+       FROM \`${CONFIG.worldDb}\`.holiday_dates
+       ORDER BY id, date_id`,
     );
     const now = Date.now();
     const out = [];
     for (const row of rows) {
-      const occ = nextOccurrence(row, now);
-      if (!occ) continue;
+      const hid = Number(row.holidayId);
+      const meta = HOLIDAYS[hid];
+      const startMs = decodePackedDate(Number(row.date_value));
+      const perRowDurMin = Number(row.holiday_duration ?? 0);
+      const durMin = perRowDurMin > 0 ? perRowDurMin : (meta?.durationMin ?? 1440);
+      const endMs = startMs + durMin * 60_000;
+
+      if (endMs < now) continue; // past, skip
+
       out.push({
-        id: Number(row.entry),
-        title: row.description,
-        holidayId: Number(row.holiday ?? 0) || null,
-        start: new Date(occ.start).toISOString(),
-        end: new Date(occ.end).toISOString(),
-        active: occ.active,
-        recurs: Number(row.occurence) > 0,
-        occurrenceMin: Number(row.occurence),
-        lengthMin: Number(row.length),
+        id: hid * 100 + Number(row.date_id),
+        title: meta?.name ?? `Holiday #${hid}`,
+        holidayId: hid,
+        start: new Date(startMs).toISOString(),
+        end: new Date(endMs).toISOString(),
+        active: now >= startMs && now < endMs,
+        recurs: true,
+        occurrenceMin: 525600, // annual default; informational only
+        lengthMin: durMin,
       });
     }
-    // Sort: active first (by end asc), then upcoming (by start asc).
+    // Active first (ending soonest), then upcoming (starting soonest).
     out.sort((a, b) => {
       if (a.active !== b.active) return a.active ? -1 : 1;
       const key = a.active ? "end" : "start";
