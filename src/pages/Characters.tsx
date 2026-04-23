@@ -141,6 +141,9 @@ export default function Characters() {
 }
 
 function CharacterDetail({ c }: { c: Character }) {
+  console.log(
+    `[char] ${c.name} raw money=${c.money} (formatted: ${formatMoney(c.money)}) honor=${c.honorPoints} kills=${c.totalKills}`,
+  );
   const classColor = CLASS_COLORS[c.className] ?? "text-neutral-100";
   const clsColor = classIconColor(c.className);
   const clsFlat = classIcon(c.className);

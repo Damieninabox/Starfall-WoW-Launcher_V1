@@ -32,18 +32,32 @@ export default function Admin() {
   const [savedKey, setSavedKey] = useState<string | null>(null);
 
   useEffect(() => {
+    console.log("[admin] check adminMe");
     api
       .adminMe()
-      .then((r) => setAllowed(r.isAdmin))
-      .catch(() => setAllowed(false));
+      .then((r) => {
+        console.log("[admin] adminMe ->", r);
+        setAllowed(r.isAdmin);
+      })
+      .catch((e) => {
+        console.error("[admin] adminMe failed", e);
+        setAllowed(false);
+      });
   }, []);
 
   useEffect(() => {
     if (!allowed) return;
+    console.log("[admin] fetching settings");
     api
       .adminSettings()
-      .then((r) => setSettings(r.settings))
-      .catch((e) => setError(String(e)));
+      .then((r) => {
+        console.log(`[admin] got ${r.settings.length} settings`);
+        setSettings(r.settings);
+      })
+      .catch((e) => {
+        console.error("[admin] settings fetch failed", e);
+        setError(String(e));
+      });
   }, [allowed]);
 
   const grouped = useMemo(() => {
@@ -142,12 +156,11 @@ export default function Admin() {
                         <input
                           type="checkbox"
                           checked={current === "1"}
-                          onChange={(e) =>
-                            setEdits((p) => ({
-                              ...p,
-                              [s.key]: e.currentTarget.checked ? "1" : "0",
-                            }))
-                          }
+                          onChange={(e) => {
+                            const next = e.currentTarget.checked ? "1" : "0";
+                            console.log(`[admin] edit bool ${s.key} -> ${next}`);
+                            setEdits((p) => ({ ...p, [s.key]: next }));
+                          }}
                           className="h-4 w-4 accent-violet-500"
                         />
                         <span>{current === "1" ? "Enabled" : "Disabled"}</span>
@@ -155,9 +168,10 @@ export default function Admin() {
                     ) : s.type === "html" ? (
                       <textarea
                         value={current}
-                        onChange={(e) =>
-                          setEdits((p) => ({ ...p, [s.key]: e.currentTarget.value }))
-                        }
+                        onChange={(e) => {
+                          console.log(`[admin] edit html ${s.key} (${e.currentTarget.value.length} chars)`);
+                          setEdits((p) => ({ ...p, [s.key]: e.currentTarget.value }));
+                        }}
                         rows={4}
                         className="w-full rounded border border-neutral-700 bg-neutral-950 px-3 py-1.5 font-mono text-xs"
                       />
@@ -166,9 +180,11 @@ export default function Admin() {
                         type="text"
                         inputMode={s.type === "number" ? "numeric" : undefined}
                         value={current}
-                        onChange={(e) =>
-                          setEdits((p) => ({ ...p, [s.key]: e.currentTarget.value }))
-                        }
+                        onChange={(e) => {
+                          const v = e.currentTarget.value;
+                          console.log(`[admin] edit str ${s.key} -> ${JSON.stringify(v)}`);
+                          setEdits((p) => ({ ...p, [s.key]: v }));
+                        }}
                         className="w-full rounded border border-neutral-700 bg-neutral-950 px-3 py-1.5 font-mono text-sm"
                       />
                     )}
