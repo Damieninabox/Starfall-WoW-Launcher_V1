@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { api, type Character } from "../api/cms";
-import { classIcon, raceIcon, racePortrait, factionIcon, CURRENCY_ICONS } from "../lib/icons";
-
-const FACTION_COLORS: Record<Character["faction"], string> = {
-  Alliance: "text-sky-300",
-  Horde: "text-red-400",
-};
+import {
+  classIcon,
+  classIconColor,
+  raceIcon,
+  racePortrait,
+  factionIcon,
+  CURRENCY_ICONS,
+} from "../lib/icons";
 
 const CLASS_COLORS: Record<string, string> = {
   Warrior: "text-[#C69B6D]",
@@ -56,43 +58,72 @@ export default function Characters() {
             <ul className="flex flex-col gap-2">
               {list.map((c) => {
                 const isSel = selected?.id === c.id;
-                const clsIco = classIcon(c.className);
-                const raceIco = raceIcon(c.race, c.gender);
+                const clsColor = classIconColor(c.className);
+                const clsFlat = classIcon(c.className);
+                const portrait = racePortrait(c.race, c.gender);
+                const fallbackRace = raceIcon(c.race);
                 return (
                   <li key={c.id}>
                     <button
                       onClick={() => setSelected(c)}
                       className={[
-                        "flex w-full flex-col items-start gap-1 rounded border p-3 text-left transition-colors",
+                        "flex w-full items-start gap-3 rounded border p-3 text-left transition-colors",
                         isSel
                           ? "border-violet-500 bg-violet-500/10"
                           : "border-neutral-800 bg-neutral-900/60 hover:border-neutral-700",
                       ].join(" ")}
                     >
-                      <div className="flex w-full items-center justify-between gap-2">
+                      {(portrait || fallbackRace) && (
+                        <img
+                          src={portrait ?? fallbackRace!}
+                          onError={(e) => {
+                            const el = e.currentTarget as HTMLImageElement;
+                            if (fallbackRace && el.src !== fallbackRace) el.src = fallbackRace;
+                          }}
+                          alt=""
+                          className="h-11 w-11 flex-shrink-0 rounded object-cover ring-1 ring-neutral-800"
+                          draggable={false}
+                        />
+                      )}
+                      <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          {raceIco && (
-                            <img src={raceIco} alt="" className="h-5 w-5 rounded" draggable={false} />
+                          {(clsColor || clsFlat) && (
+                            <img
+                              src={clsColor ?? clsFlat!}
+                              onError={(e) => {
+                                const el = e.currentTarget as HTMLImageElement;
+                                if (clsFlat && el.src !== clsFlat) el.src = clsFlat;
+                              }}
+                              alt=""
+                              className="h-5 w-5 flex-shrink-0"
+                              draggable={false}
+                            />
                           )}
-                          {clsIco && (
-                            <img src={clsIco} alt="" className="h-5 w-5 rounded" draggable={false} />
-                          )}
-                          <span className={["font-semibold", CLASS_COLORS[c.className] ?? ""].join(" ")}>
+                          <span
+                            className={[
+                              "truncate font-semibold",
+                              CLASS_COLORS[c.className] ?? "",
+                            ].join(" ")}
+                          >
                             {c.name}
                           </span>
+                          <img
+                            src={factionIcon(c.faction)}
+                            alt={c.faction}
+                            title={c.faction}
+                            className="ml-auto h-4 w-4 flex-shrink-0"
+                            draggable={false}
+                          />
                         </div>
-                        <span className={["text-xs", FACTION_COLORS[c.faction]].join(" ")}>
-                          {c.faction}
-                        </span>
-                      </div>
-                      <div className="text-xs text-neutral-400">
-                        {c.race} {c.className} · Lv{c.level}
-                      </div>
-                      {c.guild && (
-                        <div className="text-xs text-neutral-500">
-                          &lt;{c.guild}&gt;
+                        <div className="mt-0.5 truncate text-xs text-neutral-400">
+                          {c.race} {c.className} · Lv{c.level}
                         </div>
-                      )}
+                        {c.guild && (
+                          <div className="truncate text-xs text-neutral-500">
+                            &lt;{c.guild}&gt;
+                          </div>
+                        )}
+                      </div>
                     </button>
                   </li>
                 );
@@ -111,7 +142,8 @@ export default function Characters() {
 
 function CharacterDetail({ c }: { c: Character }) {
   const classColor = CLASS_COLORS[c.className] ?? "text-neutral-100";
-  const clsIco = classIcon(c.className);
+  const clsColor = classIconColor(c.className);
+  const clsFlat = classIcon(c.className);
   const portrait = racePortrait(c.race, c.gender);
   const fallbackRace = raceIcon(c.race);
   const factionImg = factionIcon(c.faction);
@@ -134,7 +166,18 @@ function CharacterDetail({ c }: { c: Character }) {
         )}
         <div className="flex-1">
           <div className="flex flex-wrap items-center gap-3">
-            {clsIco && <img src={clsIco} alt="" className="h-8 w-8" draggable={false} />}
+            {(clsColor || clsFlat) && (
+              <img
+                src={clsColor ?? clsFlat!}
+                onError={(e) => {
+                  const el = e.currentTarget as HTMLImageElement;
+                  if (clsFlat && el.src !== clsFlat) el.src = clsFlat;
+                }}
+                alt=""
+                className="h-8 w-8"
+                draggable={false}
+              />
+            )}
             <h2 className={["text-3xl font-semibold tracking-tight", classColor].join(" ")}>
               {c.name}
             </h2>
@@ -198,7 +241,9 @@ function Stat({ label, value, iconUrl }: { label: string; value: string; iconUrl
 
 function numberFmt(n?: number): string {
   if (n === undefined || n === null) return "—";
-  return n.toLocaleString();
+  // Force comma thousands separator — the browser's locale sometimes uses
+  // a thin-space ("2 769") which reads weirdly.
+  return n.toLocaleString("en-US");
 }
 
 function formatMoney(copper?: number): string {

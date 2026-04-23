@@ -14,7 +14,7 @@ export function wowheadIcon(slug: string): string {
   return `${WOWHEAD}/${slug}.jpg`;
 }
 
-// --- class icons (public/classes/*.svg) ----------------------------------
+// --- class icons ---------------------------------------------------------
 
 const CLASS_SLUGS: Record<string, string> = {
   Warrior: "warrior",
@@ -29,9 +29,30 @@ const CLASS_SLUGS: Record<string, string> = {
   Druid: "druid",
 };
 
+// Flat SVG silhouette (public/classes/*.svg). Monochrome — use for chips.
 export function classIcon(className: string): string | null {
   const slug = CLASS_SLUGS[className];
   return slug ? `/classes/${slug}.svg` : null;
+}
+
+// Color PNG class icon (public/icons/class/*.png). Filename uses the WoW
+// pretty name with spaces (e.g. "death knight.png").
+const CLASS_PNG_FILES: Record<string, string> = {
+  Warrior: "warrior",
+  Paladin: "paladin",
+  Hunter: "hunter",
+  Rogue: "rogue",
+  Priest: "priest",
+  "Death Knight": "death knight",
+  Shaman: "shaman",
+  Mage: "mage",
+  Warlock: "warlock",
+  Druid: "druid",
+};
+
+export function classIconColor(className: string): string | null {
+  const file = CLASS_PNG_FILES[className];
+  return file ? `/icons/class/${encodeURIComponent(file)}.png` : null;
 }
 
 // --- race icons ----------------------------------------------------------
@@ -143,7 +164,7 @@ export const CURRENCY_ICONS = {
   arena2v2: wowheadIcon("achievement_arena_2v2_7"),
   arena3v3: wowheadIcon("achievement_arena_3v3_7"),
   arena5v5: wowheadIcon("achievement_arena_5v5_7"),
-  kills: wowheadIcon("inv_misc_head_human_02"),
+  kills: wowheadIcon("achievement_pvp_a_08"),
   played: wowheadIcon("inv_misc_pocketwatch_01"),
 } as const;
 
