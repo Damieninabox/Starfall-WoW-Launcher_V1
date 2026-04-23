@@ -121,7 +121,8 @@ export async function charactersForAccount(accountId) {
       faction: FACTION_BY_RACE[r.race] ?? "Alliance",
       level: Number(r.level),
       money: Number(r.money),
-      honorPoints: Number(r.totalHonorPoints ?? 0),
+      // TrinityCore stores honor in hundredths (e.g. 18.75 honor = 1875 stored)
+      honorPoints: Math.floor(Number(r.totalHonorPoints ?? 0) / 100),
       totalKills: Number(r.totalKills ?? 0),
       zoneId: Number(r.zone ?? 0),
       totalPlayedSec: Number(r.totaltime ?? 0),
@@ -990,14 +991,23 @@ export async function raidProgression(currentPatch = "4.3.4") {
   if (!dbEnabled()) return null;
   try {
     const allBossIds = CATA_RAIDS.flatMap((r) => r.bosses.map((b) => b.achievementId));
+    // Two-step: find first-kill (achievement, MIN(date)) per boss, then join
+    // character + guild for details. Avoids ONLY_FULL_GROUP_BY violations
+    // from selecting c.name / g.name alongside a MIN aggregate.
     const [rows] = await pool.query(
-      `SELECT ca.achievement, MIN(ca.date) AS first_date, c.name AS first_char, g.name AS first_guild
-       FROM \`${CONFIG.charsDb}\`.character_achievement ca
+      `SELECT fk.achievement, fk.first_date, c.name AS first_char, g.name AS first_guild
+       FROM (
+         SELECT achievement, MIN(date) AS first_date
+         FROM \`${CONFIG.charsDb}\`.character_achievement
+         WHERE achievement IN (?)
+         GROUP BY achievement
+       ) fk
+       JOIN \`${CONFIG.charsDb}\`.character_achievement ca
+         ON ca.achievement = fk.achievement AND ca.date = fk.first_date
        JOIN \`${CONFIG.charsDb}\`.characters c ON c.guid = ca.guid
        LEFT JOIN \`${CONFIG.charsDb}\`.guild_member gm ON gm.guid = c.guid
        LEFT JOIN \`${CONFIG.charsDb}\`.guild g ON g.guildid = gm.guildid
-       WHERE ca.achievement IN (?)
-       GROUP BY ca.achievement`,
+       GROUP BY fk.achievement, fk.first_date, c.name, g.name`,
       [allBossIds],
     );
     const firstKills = new Map();
