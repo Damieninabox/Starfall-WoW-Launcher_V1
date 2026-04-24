@@ -258,6 +258,66 @@ export interface SessionEntry {
   ua: string;
   createdAt: string;
 }
+export interface ArmoryStats {
+  maxHealth: number;
+  strength: number;
+  agility: number;
+  stamina: number;
+  intellect: number;
+  spirit: number;
+  armor: number;
+  blockPct: string;
+  dodgePct: string;
+  parryPct: string;
+  critPct: string;
+  spellCritPct: string;
+  attackPower: number;
+  rangedAttackPower: number;
+  spellPower: number;
+  resilience: number;
+  mastery: string;
+  averageItemLevel: string;
+}
+export interface ArmoryEquipItem {
+  slot: number;
+  itemEntry: number;
+  name: string;
+  quality: number;
+}
+export interface ArmoryCollectionItem {
+  spellId: number;
+  name: string;
+  icon: string | null;
+}
+export interface ArmoryData {
+  character: {
+    guid: number;
+    account: number;
+    name: string;
+    race: number;
+    class: number;
+    gender: number;
+    level: number;
+    online: boolean;
+    totaltime: number;
+    honorPoints: number;
+    totalKills: number;
+    conquestPoints: number;
+  };
+  stats: ArmoryStats | null;
+  maxPower: number;
+  professions: { name: string; value: number; max: number }[];
+  reputations: { id: number; name: string; standing: number; standingName: string; standingColor: string }[];
+  raidProgress: { raidName: string; image: string; totalBosses: number; normalKills: number; heroicKills: number }[];
+  mythicPlus: {
+    history: { week: number; highestKey: number; runs: number }[];
+    allTimeHighest: number;
+    totalRuns: number;
+  };
+  equipment: ArmoryEquipItem[];
+  collections: { mounts: ArmoryCollectionItem[]; companions: ArmoryCollectionItem[] };
+}
+
 export interface Me {
   id: string;
   username: string;
@@ -288,6 +348,9 @@ export const api = {
   sessions: () => cmsGet<{ sessions: SessionEntry[] }>("/api/account/sessions"),
   revokeAll: () => cmsPost<{ ok: true }>("/api/account/sessions/revoke-all"),
   characters: () => cmsGet<{ characters: Character[] }>("/api/account/characters"),
+  armory: (name: string) => cmsGet<ArmoryData>(`/api/armory/${encodeURIComponent(name)}`),
+  itemById: (id: number) => cmsGet<Item>(`/api/items/${id}`),
+  itemTooltip: (id: number) => cmsGet<{ html: string }>(`/api/items/tooltip?id=${id}`),
   referral: () => cmsGet<Referral>("/api/account/referral"),
   wishlist: () => cmsGet<{ items: Item[] }>("/api/account/wishlist"),
   addToWishlist: (itemId: number) =>

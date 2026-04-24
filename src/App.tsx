@@ -1,8 +1,10 @@
-import { NavLink, Navigate, Route, Routes } from "react-router-dom";
+import { NavLink, Navigate, Route, Routes, useNavigate } from "react-router-dom";
+import { logout } from "./api/auth";
 import Login from "./pages/Login";
 import Home from "./pages/Home";
 import Install from "./pages/Install";
 import Characters from "./pages/Characters";
+import Armory from "./pages/Armory";
 import MythicPlus from "./pages/MythicPlus";
 import Leaderboards from "./pages/Leaderboards";
 import LeaderboardPvP from "./pages/LeaderboardPvP";
@@ -39,6 +41,17 @@ const secondary = [
 function Shell({ children }: { children: React.ReactNode }) {
   const displayName = useAuthStore((s) => s.displayName);
   const isAdmin = useAuthStore((s) => s.isAdmin);
+  const clearAuth = useAuthStore((s) => s.clear);
+  const navigate = useNavigate();
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch {
+      // backend already cleared state / network down — safe to fall through
+    }
+    clearAuth();
+    navigate("/login", { replace: true });
+  };
   return (
     <div className="flex h-full flex-col">
       <header className="flex flex-wrap items-center gap-4 border-b border-violet-500/20 bg-[#0c0f1f]/75 px-6 py-3 backdrop-blur">
@@ -100,8 +113,32 @@ function Shell({ children }: { children: React.ReactNode }) {
             ))}
           </div>
           {displayName && (
-            <div className="rounded-full border border-violet-500/30 bg-violet-500/10 px-3 py-1 font-mono text-violet-100">
-              {displayName}
+            <div className="flex items-center gap-2">
+              <div className="rounded-full border border-violet-500/30 bg-violet-500/10 px-3 py-1 font-mono text-violet-100">
+                {displayName}
+              </div>
+              <button
+                onClick={handleLogout}
+                title="Sign out"
+                aria-label="Sign out"
+                className="flex h-7 w-7 items-center justify-center rounded-full border border-neutral-700 text-neutral-400 transition-colors hover:border-red-500/60 hover:bg-red-500/10 hover:text-red-300"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" y1="12" x2="9" y2="12" />
+                </svg>
+              </button>
             </div>
           )}
         </div>
@@ -124,6 +161,7 @@ function AppRoutes() {
                 <Route path="/" element={<Navigate to="/home" replace />} />
                 <Route path="/home" element={<Home />} />
                 <Route path="/characters" element={<Characters />} />
+                <Route path="/armory/:name" element={<Armory />} />
                 <Route path="/leaderboards" element={<Leaderboards />}>
                   <Route path="mythicplus" element={<MythicPlus />} />
                   <Route path="pvp" element={<LeaderboardPvP />} />

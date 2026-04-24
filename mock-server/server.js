@@ -10,11 +10,14 @@ import { initDb, seedLauncherSettings } from "./db.js";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const FILES_DIR = path.join(__dirname, "files");
 const CMS_IMAGES_DIR =
-  process.env.CMS_IMAGES_DIR ?? "C:\\Starfall-WoW-CMS\\public\\images";
+  process.env.CMS_IMAGES_DIR ?? "E:\\Starfall-WoW-CMS\\public\\images";
 const PORT = 8787;
 const HOST = "127.0.0.1";
 const MANIFEST_VERSION = "2026.04.22";
 const BASE_URL = `http://${HOST}:${PORT}/files`;
+// Real CMS for endpoints the mock defers to (armory, etc.). Dev-only.
+const CMS_ORIGIN = process.env.CMS_ORIGIN ?? "http://localhost:3000";
+const PROXY_PREFIXES = ["/api/armory/", "/api/items/tooltip"];
 
 const spec = [
   { relPath: "test1.bin", size: 1 * 1024 * 1024, category: "client", mode: "random" },
@@ -81,6 +84,41 @@ async function buildManifest() {
     files,
     deletions: [],
   };
+}
+
+// Forward a request to the real CMS. Scoped to PROXY_PREFIXES (dev-only) so
+// endpoints that rely on mock-specific state (wishlists, auth) stay local.
+async function proxyToCms(req, res, url) {
+  const target = new URL(url.pathname + url.search, CMS_ORIGIN);
+  const headers = { ...req.headers };
+  delete headers.host;
+  delete headers["content-length"];
+  let body;
+  if (req.method !== "GET" && req.method !== "HEAD") {
+    const chunks = [];
+    for await (const c of req) chunks.push(c);
+    body = Buffer.concat(chunks);
+  }
+  try {
+    const resp = await fetch(target, {
+      method: req.method,
+      headers,
+      body,
+      redirect: "manual",
+    });
+    const buf = Buffer.from(await resp.arrayBuffer());
+    const outHeaders = {};
+    resp.headers.forEach((v, k) => {
+      if (k === "content-encoding" || k === "transfer-encoding") return;
+      outHeaders[k] = v;
+    });
+    outHeaders["content-length"] = buf.length;
+    res.writeHead(resp.status, outHeaders);
+    res.end(buf);
+  } catch (e) {
+    console.warn("[proxy] cms unreachable:", e.message);
+    sendJson(res, 502, { error: "CMS unreachable", detail: String(e.message ?? e) });
+  }
 }
 
 function sendJson(res, status, body) {
@@ -216,6 +254,10 @@ async function main() {
         await ensureFiles();
         manifest = await buildManifest();
         sendJson(res, 200, { ok: true, version: manifest.version });
+        return;
+      }
+      if (PROXY_PREFIXES.some((pre) => url.pathname.startsWith(pre))) {
+        await proxyToCms(req, res, url);
         return;
       }
       if (

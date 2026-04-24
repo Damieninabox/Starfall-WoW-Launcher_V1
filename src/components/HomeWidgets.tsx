@@ -9,6 +9,7 @@ import {
   type ServerStatus,
   type WorldEvent,
 } from "../api/cms";
+import { POOL_META, findAffix, iconUrlFor } from "../lib/affixes";
 
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -161,17 +162,69 @@ export function AffixesCard() {
       {a && (
         <div className="flex flex-col gap-2">
           <div className="text-xs text-neutral-500">Week {a.week}</div>
-          <div className="flex flex-col gap-2">
-            {a.rotation.map((affix) => (
-              <div
-                key={affix.id}
-                className="rounded border border-neutral-800 bg-neutral-950 p-2"
-              >
-                <div className="text-sm font-medium">{affix.name}</div>
-                <div className="text-xs text-neutral-400">{affix.description}</div>
-              </div>
-            ))}
-          </div>
+          {a.rotation.length === 0 ? (
+            <div className="text-xs italic text-neutral-500">
+              Waiting for the next rotation.
+            </div>
+          ) : (
+            <ul className="flex flex-col gap-1.5">
+              {a.rotation.map((api) => {
+                const resolved = findAffix({ id: api.id, name: api.name });
+                const meta = resolved ? POOL_META[resolved.pool] : null;
+                const color = meta?.color ?? "#7c3aed";
+                const short = resolved?.short ?? api.description;
+                return (
+                  <li
+                    key={api.id}
+                    className="relative flex items-start gap-2.5 overflow-hidden rounded border border-white/[0.06] bg-white/[0.02] p-2 pl-2.5"
+                  >
+                    <div
+                      className="absolute inset-y-0 left-0 w-0.5"
+                      style={{ backgroundColor: color }}
+                    />
+                    {resolved ? (
+                      <img
+                        src={iconUrlFor(resolved)}
+                        alt=""
+                        className="h-9 w-9 flex-shrink-0 rounded border"
+                        style={{ borderColor: `${color}40` }}
+                        draggable={false}
+                      />
+                    ) : (
+                      <div
+                        className="h-9 w-9 flex-shrink-0 rounded border"
+                        style={{ borderColor: `${color}40`, backgroundColor: `${color}15` }}
+                      />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        {meta && (
+                          <span
+                            className="text-[9px] font-bold uppercase tracking-wider"
+                            style={{ color }}
+                          >
+                            {meta.label}
+                          </span>
+                        )}
+                        <span className="truncate text-sm font-semibold text-neutral-100">
+                          {api.name}
+                        </span>
+                      </div>
+                      <p className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-neutral-400">
+                        {short}
+                      </p>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          <Link
+            to="/leaderboards/mythicplus?tab=affixes"
+            className="self-start text-xs text-violet-300 hover:text-violet-200"
+          >
+            Full rotation →
+          </Link>
         </div>
       )}
     </SectionCard>

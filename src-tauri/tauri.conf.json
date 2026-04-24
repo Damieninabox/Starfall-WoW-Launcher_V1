@@ -13,11 +13,12 @@
     "windows": [
       {
         "title": "Starfall Launcher",
-        "width": 1100,
-        "height": 720,
+        "width": 1280,
+        "height": 800,
         "minWidth": 900,
         "minHeight": 600,
-        "maximizable": false,
+        "resizable": true,
+        "maximizable": true,
         "fullscreen": false
       }
     ],

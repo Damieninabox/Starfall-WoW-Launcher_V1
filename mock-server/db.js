@@ -4,7 +4,33 @@
 // while still showing real characters/guilds when one is running.
 
 import mysql from "mysql2/promise";
+import net from "node:net";
 import { verifyPassword } from "./srp6.js";
+
+// Short TCP connect probe — used to see whether the worldserver is actually up
+// on the realm's address:port. The auth DB doesn't track world-server
+// heartbeats, so this is the authoritative signal for "is the realm online".
+function tcpProbe(host, port, timeoutMs = 600) {
+  return new Promise((resolve) => {
+    const sock = new net.Socket();
+    let done = false;
+    const finish = (ok) => {
+      if (done) return;
+      done = true;
+      sock.destroy();
+      resolve(ok);
+    };
+    sock.setTimeout(timeoutMs);
+    sock.once("connect", () => finish(true));
+    sock.once("timeout", () => finish(false));
+    sock.once("error", () => finish(false));
+    try {
+      sock.connect(port, host);
+    } catch {
+      finish(false);
+    }
+  });
+}
 
 const CONFIG = {
   host: process.env.MYSQL_HOST ?? "localhost",
@@ -179,9 +205,16 @@ export async function realmStatus() {
     const [[{ n: online }]] = await pool.query(
       `SELECT COUNT(*) AS n FROM \`${CONFIG.charsDb}\`.characters WHERE online = 1`,
     );
+    // Probe the worldserver port directly — the auth DB only records realm
+    // config, not liveness. If the server process is down, nothing in the DB
+    // will flip; only a TCP probe tells the truth.
+    const probeHost = realm.address === "127.0.0.1" || realm.address === "0.0.0.0"
+      ? "127.0.0.1"
+      : realm.address;
+    const worldOnline = await tcpProbe(probeHost, Number(realm.port));
     return {
-      online: true, // auth DB doesn't expose worldserver heartbeat; default true when reachable
-      population: Number(online),
+      online: worldOnline,
+      population: worldOnline ? Number(online) : 0,
       realm: realm.name,
       address: realm.address,
       port: Number(realm.port),
@@ -519,6 +552,48 @@ function mapItemRow(r) {
   };
 }
 
+// TrinityCore's item_template has displayid (an MPQ/DBC model reference) but
+// no icon_name column — icons live in the client DBCs. We lazily resolve them
+// via Wowhead's tooltip JSON and cache the result in item_icon_cache so each
+// entry is only fetched once.
+async function populateMissingIcons(rows) {
+  const missing = rows.filter(r => !r.icon_name).map(r => Number(r.id));
+  if (missing.length === 0) return rows;
+  const resolved = new Map();
+  const CONCURRENCY = 8;
+  for (let i = 0; i < missing.length; i += CONCURRENCY) {
+    const batch = missing.slice(i, i + CONCURRENCY);
+    await Promise.all(batch.map(async (entry) => {
+      try {
+        const resp = await fetch(
+          `https://nether.wowhead.com/tooltip/item/${entry}?dataEnv=1&locale=0`,
+          { signal: AbortSignal.timeout(3000) },
+        );
+        if (!resp.ok) return;
+        const data = await resp.json();
+        const icon = typeof data?.icon === "string" ? data.icon : null;
+        if (!icon) return;
+        resolved.set(entry, icon);
+      } catch { /* ignore — leave icon null */ }
+    }));
+  }
+  if (resolved.size > 0) {
+    const values = [...resolved.entries()].flat();
+    const placeholders = [...resolved].map(() => "(?, ?)").join(",");
+    try {
+      await pool.query(
+        `INSERT IGNORE INTO \`${CONFIG.cmsDb}\`.item_icon_cache (item_entry, icon_name) VALUES ${placeholders}`,
+        values,
+      );
+    } catch (e) { console.warn("[db] item_icon_cache write:", e.message); }
+  }
+  return rows.map(r => {
+    if (r.icon_name) return r;
+    const icon = resolved.get(Number(r.id));
+    return icon ? { ...r, icon_name: icon } : r;
+  });
+}
+
 export async function itemSearch(queryStr, limit = 30) {
   if (!dbEnabled()) return null;
   const needle = String(queryStr ?? "").trim();
@@ -534,7 +609,8 @@ export async function itemSearch(queryStr, limit = 30) {
        LIMIT ?`,
       [`%${needle}%`, limit],
     );
-    return rows.map(mapItemRow);
+    const hydrated = await populateMissingIcons(rows);
+    return hydrated.map(mapItemRow);
   } catch (e) { console.warn("[db] itemSearch:", e.message); return null; }
 }
 
@@ -549,7 +625,9 @@ export async function itemById(id) {
        WHERE it.entry = ? LIMIT 1`,
       [id],
     );
-    return rows[0] ? mapItemRow(rows[0]) : null;
+    if (!rows[0]) return null;
+    const [hydrated] = await populateMissingIcons(rows);
+    return mapItemRow(hydrated);
   } catch (e) { console.warn("[db] itemById:", e.message); return null; }
 }
 

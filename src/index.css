@@ -58,3 +58,109 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(124, 58, 237, 0.75);
 }
+
+/* ============================================================
+   Wowhead tooltip — HTML comes from /api/items/tooltip and is
+   rendered via dangerouslySetInnerHTML. Styles kept in sync with
+   the CMS so the tooltip renders identically in both apps.
+   ============================================================ */
+.wh-tooltip {
+  background: linear-gradient(135deg, #1a1028 0%, #0f0a1a 100%);
+  border: 1px solid #4a3a8a;
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), 0 0 12px rgba(74, 58, 138, 0.3);
+}
+.wh-tooltip table { border-collapse: collapse; width: 100%; }
+.wh-tooltip td { padding: 1px 0; vertical-align: top; }
+.wh-tooltip th { padding: 1px 0; text-align: left; font-weight: normal; }
+.wh-tooltip b { font-weight: 700; }
+.wh-tooltip span { display: inline; }
+
+.wh-tooltip .q  { color: #ffd100 !important; }
+.wh-tooltip .q0 { color: #9d9d9d !important; }
+.wh-tooltip .q1 { color: #ffffff !important; }
+.wh-tooltip .q2 { color: #1eff00 !important; }
+.wh-tooltip .q3 { color: #0070dd !important; }
+.wh-tooltip .q4 { color: #a335ee !important; }
+.wh-tooltip .q5 { color: #ff8000 !important; }
+.wh-tooltip .q6 { color: #e6cc80 !important; }
+.wh-tooltip .q7 { color: #00ccff !important; }
+.wh-tooltip .q8 { color: #00ccff !important; }
+.wh-tooltip .q10 { color: #a335ee !important; }
+
+.wh-tooltip .c1  { color: #c79c6e !important; }
+.wh-tooltip .c2  { color: #f58cba !important; }
+.wh-tooltip .c3  { color: #abd473 !important; }
+.wh-tooltip .c4  { color: #fff569 !important; }
+.wh-tooltip .c5  { color: #ffffff !important; }
+.wh-tooltip .c6  { color: #c41f3b !important; }
+.wh-tooltip .c7  { color: #0070de !important; }
+.wh-tooltip .c8  { color: #69ccf0 !important; }
+.wh-tooltip .c9  { color: #9482c9 !important; }
+.wh-tooltip .c11 { color: #ff7d0a !important; }
+
+.wh-tooltip a { color: #1eff00 !important; text-decoration: none; }
+.wh-tooltip a:hover { text-decoration: underline; }
+
+.wh-tooltip .indent { padding-left: 12px; }
+.wh-tooltip .whtt-extra { margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.08); }
+
+.wh-tooltip .moneygold   { color: #ffd700 !important; }
+.wh-tooltip .moneysilver { color: #c0c0c0 !important; }
+.wh-tooltip .moneycopper { color: #cd7f32 !important; }
+.wh-tooltip .moneygold::after,
+.wh-tooltip .moneysilver::after,
+.wh-tooltip .moneycopper::after {
+  content: '';
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-left: 2px;
+  margin-right: 4px;
+  border-radius: 50%;
+  vertical-align: middle;
+}
+.wh-tooltip .moneygold::after   { background: #ffd700; }
+.wh-tooltip .moneysilver::after { background: #c0c0c0; }
+.wh-tooltip .moneycopper::after { background: #cd7f32; }
+
+.wh-tooltip .whtt-sellprice { display: none; }
+
+.wh-tooltip a.socket-meta,
+.wh-tooltip a.socket-red,
+.wh-tooltip a.socket-yellow,
+.wh-tooltip a.socket-blue {
+  display: inline !important;
+  width: auto !important;
+  height: auto !important;
+  background: none !important;
+  text-decoration: none;
+  margin-right: 0;
+  vertical-align: baseline;
+}
+.wh-tooltip a.socket-meta::before,
+.wh-tooltip a.socket-red::before,
+.wh-tooltip a.socket-yellow::before,
+.wh-tooltip a.socket-blue::before {
+  content: '';
+  display: inline-block;
+  width: 10px; height: 10px;
+  border-radius: 2px;
+  margin-right: 5px;
+  vertical-align: middle;
+}
+.wh-tooltip a.socket-meta::before   { background: #888; }
+.wh-tooltip a.socket-red::before    { background: #ff4444; }
+.wh-tooltip a.socket-yellow::before { background: #ffcc00; }
+.wh-tooltip a.socket-blue::before   { background: #4444ff; }
+.wh-tooltip a.socket-meta,
+.wh-tooltip a.socket-red,
+.wh-tooltip a.socket-yellow,
+.wh-tooltip a.socket-blue {
+  color: #9d9d9d !important;
+}

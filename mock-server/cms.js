@@ -37,6 +37,18 @@ import {
   itemById,
 } from "./db.js";
 
+// ISO 8601 year-week — "YYYY-WNN" (e.g. "2026-W16"). The ISO year can differ
+// from the calendar year around year boundaries, so compute both from the
+// Thursday of the target week (the standard ISO trick).
+function isoYearWeek(date) {
+  const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+  const year = d.getUTCFullYear();
+  const yearStart = new Date(Date.UTC(year, 0, 1));
+  const week = Math.ceil((((d.getTime() - yearStart.getTime()) / 86_400_000) + 1) / 7);
+  return `${year}-W${String(week).padStart(2, "0")}`;
+}
+
 // --- fixtures ---------------------------------------------------------------
 
 const USER = {
@@ -59,7 +71,7 @@ const CHARACTERS = [
 ];
 
 const AFFIXES = {
-  week: "2026-16",
+  week: "2026-W16",
   rotation: [
     { id: 9, name: "Tyrannical", icon: "mplus-tyrannical", description: "Bosses have 30% more health and deal 15% more damage." },
     { id: 6, name: "Raging", icon: "mplus-raging", description: "Non-boss enemies enrage at 30% health." },
@@ -599,14 +611,7 @@ export async function handleCms(req, res, url) {
     return sendJson(res, 200, { teams: rows ?? [] });
   }
 
-  // armory
-  const armory = p.match(/^\/api\/armory\/([^/]+)\/([^/]+)$/);
-  if (req.method === "GET" && armory) {
-    const [, , name] = armory;
-    const ch = CHARACTERS.find((c) => c.name.toLowerCase() === name.toLowerCase());
-    if (!ch) return sendJson(res, 404, { error: "not found" });
-    return sendJson(res, 200, { character: ch }) ?? true;
-  }
+  // armory — handled by server.js proxy to the real CMS. No stub here.
 
   // guild
   const guild = p.match(/^\/api\/guild\/([^/]+)$/);
@@ -649,7 +654,7 @@ export async function handleCms(req, res, url) {
     const live = await mplusWeeklyAffixes();
     if (live) {
       return sendJson(res, 200, {
-        week: `week-${live.weekSeed}`,
+        week: isoYearWeek(live.startTime ? new Date(live.startTime) : new Date()),
         startTime: live.startTime,
         endTime: live.endTime,
         rotation: live.rotation.map((a) => ({
