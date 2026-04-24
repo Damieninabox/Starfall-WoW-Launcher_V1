@@ -388,7 +388,6 @@ export async function cmsAccountPoints(accountId) {
 // mythic_dungeon_config will show up in the UI.
 const DUNGEON_NAMES = {
   33: "Shadowfang Keep",
-  36: "Deadmines",
   643: "Throne of the Tides",
   644: "Halls of Origination",
   645: "Blackrock Caverns",

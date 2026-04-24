@@ -70,14 +70,49 @@ const CHARACTERS = [
   { id: 10004, name: "Veinsplitter", realm: "Starfall", className: "Rogue", race: "Troll", faction: "Horde", level: 84, itemLevel: 340, guild: null, lastPlayed: "2026-03-10T11:00:00Z" },
 ];
 
-const AFFIXES = {
-  week: "2026-W16",
-  rotation: [
-    { id: 9, name: "Tyrannical", icon: "mplus-tyrannical", description: "Bosses have 30% more health and deal 15% more damage." },
-    { id: 6, name: "Raging", icon: "mplus-raging", description: "Non-boss enemies enrage at 30% health." },
-    { id: 123, name: "Spiteful", icon: "mplus-spiteful", description: "Fallen non-boss enemies spawn Spiteful Shades." },
-  ],
-};
+// Mirror of the 15-affix catalog in `src/lib/affixes.ts` — keep ids/names in
+// sync with the CMS so the launcher's findAffix() resolves the rotation.
+const AFFIX_CATALOG = [
+  { id: 1,  pool: "low",  name: "Fortified",         icon: "ability_toughness",               description: "Non-boss enemies have 20% more health and deal 30% more damage." },
+  { id: 2,  pool: "low",  name: "Tyrannical",        icon: "achievement_boss_archaedas",      description: "Boss enemies have 30% more health and their abilities hit 15% harder." },
+  { id: 3,  pool: "low",  name: "Raging",            icon: "ability_druid_challangingroar",   description: "Non-boss enemies enrage at 30% health remaining, immune to crowd control." },
+  { id: 4,  pool: "low",  name: "Bolstering",        icon: "spell_arcane_blast",              description: "When a non-boss enemy dies, it empowers nearby allies." },
+  { id: 5,  pool: "low",  name: "Sanguine",          icon: "spell_shadow_bloodboil",          description: "Enemy corpses leave blood pools that heal foes and damage players." },
+  { id: 6,  pool: "mid",  name: "Bursting",          icon: "ability_warlock_haunt",           description: "Slain non-bosses explode, applying a stacking DoT to the party." },
+  { id: 7,  pool: "mid",  name: "Static Link",       icon: "spell_shaman_staticshock",        description: "Two players are periodically linked by an arc of electricity." },
+  { id: 8,  pool: "mid",  name: "Arcane Echo",       icon: "spell_arcane_arcaneresilience",   description: "Arcane energy echoes from enemies, dealing periodic AoE damage." },
+  { id: 9,  pool: "mid",  name: "Necrotic",          icon: "spell_shadow_plaguecloud",        description: "Enemy melee attacks apply a stacking 2%-per-stack healing-reduction debuff." },
+  { id: 10, pool: "mid",  name: "Starfall",          icon: "spell_arcane_starfire",           description: "Astral stars fall and collapse into heavy AoE explosions." },
+  { id: 11, pool: "high", name: "Void Rift",         icon: "inv_misc_volatileshadow",         description: "Void rifts pulse shadow damage and weaken nearby players." },
+  { id: 12, pool: "high", name: "Unstable Flux",     icon: "spell_nature_lightningshield",    description: "Interrupting enemy spells detonates a charge for AoE damage." },
+  { id: 13, pool: "high", name: "Soul Surge",        icon: "inv_sword_122",                   description: "Slain enemies empower a Tormented Soul that casts at players." },
+  { id: 14, pool: "high", name: "Tyrael's Judgement", icon: "spell_holy_proclaimchampion_02", description: "Stack on Tyrael after each boss or face the Chains of Darkness." },
+  { id: 15, pool: "high", name: "Stormcalled",       icon: "inv_misc_stormlordsfavor",        description: "Boss impacts leave crackling lightning zones." },
+];
+
+function isoWeekNow(date = new Date()) {
+  const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+}
+
+function computeWeeklyAffixes() {
+  const week = isoWeekNow();
+  const lowPool  = AFFIX_CATALOG.filter((a) => a.pool === "low");
+  const midPool  = AFFIX_CATALOG.filter((a) => a.pool === "mid");
+  const highPool = AFFIX_CATALOG.filter((a) => a.pool === "high");
+  return {
+    week: isoYearWeek(new Date()),
+    rotation: [
+      lowPool[week % lowPool.length],
+      midPool[(week + 2) % midPool.length],
+      highPool[(week + 4) % highPool.length],
+    ],
+  };
+}
+
+const AFFIXES = computeWeeklyAffixes();
 
 const MPLUS_LEADERBOARD = [
   { rank: 1, party: ["Thrallborn", "Grimbuckle", "Ashpyre", "Veinsplitter", "Saintanvil"], dungeon: "Stonecore", timer: "22:41", score: 3521 },

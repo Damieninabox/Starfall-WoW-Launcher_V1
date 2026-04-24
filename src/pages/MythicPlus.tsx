@@ -329,12 +329,6 @@ function FeaturedAffixCard({ affix }: { affix: Affix }) {
       <div className="mb-4 flex items-center gap-3">
         <AffixIconBox affix={affix} size={56} />
         <div className="min-w-0 flex-1">
-          <div
-            className="mb-1 text-[10px] font-bold uppercase tracking-[0.2em]"
-            style={{ color: meta.color }}
-          >
-            {meta.label} · {meta.range}
-          </div>
           <h3 className="text-lg font-bold leading-tight text-white">{affix.name}</h3>
         </div>
       </div>
@@ -362,12 +356,6 @@ function LibraryAffixTile({ affix }: { affix: Affix }) {
       <div className="mb-2 flex items-center gap-2.5">
         <AffixIconBox affix={affix} size={40} />
         <div className="min-w-0 flex-1">
-          <p
-            className="text-[10px] font-bold uppercase tracking-wider"
-            style={{ color: meta.color }}
-          >
-            {meta.label}
-          </p>
           <p className="text-[13px] font-bold leading-tight text-white">{affix.name}</p>
         </div>
       </div>
@@ -383,13 +371,7 @@ function UnknownAffixCard({ pool }: { pool: AffixPool }) {
       className="rounded-xl border border-dashed p-5 text-center"
       style={{ borderColor: `${meta.color}30` }}
     >
-      <div
-        className="text-[10px] font-bold uppercase tracking-[0.2em]"
-        style={{ color: meta.color }}
-      >
-        {meta.label} · {meta.range}
-      </div>
-      <p className="mt-2 text-xs text-white/40">
+      <p className="text-xs text-white/40">
         Waiting for the next rotation to be posted by the realm.
       </p>
     </div>

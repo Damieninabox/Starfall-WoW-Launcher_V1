@@ -161,7 +161,7 @@ export function AffixesCard() {
       {!a && <div className="text-sm text-neutral-500">Loading…</div>}
       {a && (
         <div className="flex flex-col gap-2">
-          <div className="text-xs text-neutral-500">Week {a.week}</div>
+          <div className="text-xs text-neutral-500">Week {a.week.match(/W(\d+)/)?.[1] ?? a.week}</div>
           {a.rotation.length === 0 ? (
             <div className="text-xs italic text-neutral-500">
               Waiting for the next rotation.
@@ -197,19 +197,9 @@ export function AffixesCard() {
                       />
                     )}
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5">
-                        {meta && (
-                          <span
-                            className="text-[9px] font-bold uppercase tracking-wider"
-                            style={{ color }}
-                          >
-                            {meta.label}
-                          </span>
-                        )}
-                        <span className="truncate text-sm font-semibold text-neutral-100">
-                          {api.name}
-                        </span>
-                      </div>
+                      <span className="truncate text-sm font-semibold text-neutral-100">
+                        {api.name}
+                      </span>
                       <p className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-neutral-400">
                         {short}
                       </p>
