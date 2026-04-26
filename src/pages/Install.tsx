@@ -9,6 +9,7 @@ import {
 } from "../api/patcher";
 import { useInstallerStore } from "../state/installer";
 import { useLauncherStore } from "../state/launcher";
+import { useT } from "../i18n/useT";
 
 function formatBytes(n: number): string {
   if (n < 1024) return `${n} B`;
@@ -29,6 +30,7 @@ function formatEta(bytesRemaining: number, bytesPerSec: number): string {
 }
 
 export default function Install() {
+  const t = useT();
   const {
     manifestUrl,
     phase,
@@ -72,7 +74,7 @@ export default function Install() {
       const picked = await open({
         directory: true,
         multiple: false,
-        title: "Select install folder",
+        title: t("install.dialogTitle"),
       });
       if (typeof picked === "string" && picked.length > 0) {
         setInstallDir(picked);
@@ -85,7 +87,7 @@ export default function Install() {
 
   const runCheck = async () => {
     if (!installDir) {
-      setError("Pick an install folder first.");
+      setError(t("install.pickFolderFirst"));
       return;
     }
     setError(null);
@@ -103,7 +105,7 @@ export default function Install() {
 
   const startInstall = async () => {
     if (!installDir) {
-      setError("Pick an install folder first.");
+      setError(t("install.pickFolderFirst"));
       return;
     }
     setError(null);
@@ -119,7 +121,7 @@ export default function Install() {
 
   const doRepair = async () => {
     if (!installDir) {
-      setError("Pick an install folder first.");
+      setError(t("install.pickFolderFirst"));
       return;
     }
     setError(null);
@@ -156,15 +158,15 @@ export default function Install() {
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
-      <h1 className="text-2xl font-semibold">Install / Repair</h1>
+      <h1 className="text-2xl font-semibold">{t("install.title")}</h1>
 
       <section className="flex flex-col gap-3 rounded-lg border border-neutral-800 bg-neutral-900/60 p-4">
-        <label className="text-sm text-neutral-400">Install folder</label>
+        <label className="text-sm text-neutral-400">{t("install.folder")}</label>
         <div className="flex gap-2">
           <input
             readOnly
             value={installDir}
-            placeholder="No folder selected"
+            placeholder={t("install.noFolder")}
             className="flex-1 rounded border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-neutral-200"
           />
           <button
@@ -172,11 +174,11 @@ export default function Install() {
             disabled={running}
             className="rounded bg-neutral-800 px-4 py-2 text-sm hover:bg-neutral-700 disabled:opacity-50"
           >
-            Pick folder
+            {t("install.pickFolder")}
           </button>
         </div>
 
-        <label className="mt-3 text-sm text-neutral-400">Manifest URL</label>
+        <label className="mt-3 text-sm text-neutral-400">{t("install.manifestUrl")}</label>
         <input
           value={manifestUrl}
           onChange={(e) => setManifestUrl(e.currentTarget.value)}
@@ -191,56 +193,56 @@ export default function Install() {
           disabled={running || !installDir}
           className="rounded bg-neutral-800 px-4 py-2 text-sm hover:bg-neutral-700 disabled:opacity-50"
         >
-          Check
+          {t("install.check")}
         </button>
         <button
           onClick={startInstall}
           disabled={running || !installDir}
           className="rounded bg-violet-500 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-violet-400 disabled:opacity-50"
         >
-          Start install
+          {t("install.start")}
         </button>
         <button
           onClick={doPause}
           disabled={!running}
           className="rounded bg-neutral-800 px-4 py-2 text-sm hover:bg-neutral-700 disabled:opacity-50"
         >
-          Pause
+          {t("install.pause")}
         </button>
         <button
           onClick={doRepair}
           disabled={running || !installDir}
           className="rounded bg-neutral-800 px-4 py-2 text-sm hover:bg-neutral-700 disabled:opacity-50"
         >
-          Repair
+          {t("install.repair")}
         </button>
       </section>
 
       {summary && (
         <section className="rounded-lg border border-neutral-800 bg-neutral-900/60 p-4 text-sm">
           <div className="mb-2 text-neutral-400">
-            Manifest {summary.manifestVersion}
+            {t("install.manifestVersion", { version: summary.manifestVersion })}
           </div>
           <ul className="grid grid-cols-2 gap-y-1 sm:grid-cols-4">
             <li>
-              <span className="text-neutral-500">Download: </span>
+              <span className="text-neutral-500">{t("install.colDownload")} </span>
               <span className="font-mono">{summary.filesToDownload}</span>
             </li>
             <li>
-              <span className="text-neutral-500">Replace: </span>
+              <span className="text-neutral-500">{t("install.colReplace")} </span>
               <span className="font-mono">{summary.filesToReplace}</span>
             </li>
             <li>
-              <span className="text-neutral-500">Skip: </span>
+              <span className="text-neutral-500">{t("install.colSkip")} </span>
               <span className="font-mono">{summary.filesToSkip}</span>
             </li>
             <li>
-              <span className="text-neutral-500">Delete: </span>
+              <span className="text-neutral-500">{t("install.colDelete")} </span>
               <span className="font-mono">{summary.filesToDelete}</span>
             </li>
           </ul>
           <div className="mt-2 text-neutral-400">
-            Total download: {formatBytes(summary.bytesTotal)}
+            {t("install.totalDownload", { size: formatBytes(summary.bytesTotal) })}
           </div>
         </section>
       )}
@@ -249,7 +251,7 @@ export default function Install() {
         <section className="rounded-lg border border-neutral-800 bg-neutral-900/60 p-4">
           <div className="mb-2 flex items-baseline justify-between">
             <span className="text-sm text-neutral-400">
-              {progress?.status ?? "starting"}
+              {progress?.status ?? t("install.starting")}
             </span>
             <span className="font-mono text-sm">{overallPct.toFixed(1)}%</span>
           </div>
@@ -261,32 +263,32 @@ export default function Install() {
           </div>
           <div className="mt-3 grid grid-cols-2 gap-y-1 text-sm sm:grid-cols-4">
             <div className="col-span-2 sm:col-span-4">
-              <span className="text-neutral-500">File: </span>
+              <span className="text-neutral-500">{t("install.lblFile")} </span>
               <span className="font-mono">
                 {progress?.currentFile || "—"}
               </span>
             </div>
             <div>
-              <span className="text-neutral-500">Overall: </span>
+              <span className="text-neutral-500">{t("install.lblOverall")} </span>
               <span className="font-mono">
                 {formatBytes(progress?.overallBytesDone ?? 0)} /{" "}
                 {formatBytes(progress?.overallBytesTotal ?? 0)}
               </span>
             </div>
             <div>
-              <span className="text-neutral-500">Speed: </span>
+              <span className="text-neutral-500">{t("install.lblSpeed")} </span>
               <span className="font-mono">
                 {formatBytes(progress?.bytesPerSec ?? 0)}/s
               </span>
             </div>
             <div>
-              <span className="text-neutral-500">ETA: </span>
+              <span className="text-neutral-500">{t("install.lblEta")} </span>
               <span className="font-mono">
                 {formatEta(bytesRemaining, progress?.bytesPerSec ?? 0)}
               </span>
             </div>
             <div>
-              <span className="text-neutral-500">Phase: </span>
+              <span className="text-neutral-500">{t("install.lblPhase")} </span>
               <span className="font-mono">{phase}</span>
             </div>
           </div>
@@ -295,14 +297,14 @@ export default function Install() {
 
       {errorMessage && (
         <section className="rounded-lg border border-red-900/60 bg-red-950/40 p-4 text-sm text-red-200">
-          <div className="font-semibold text-red-300">Error</div>
+          <div className="font-semibold text-red-300">{t("common.error")}</div>
           <div className="mt-1 font-mono">{errorMessage}</div>
         </section>
       )}
 
       {phase === "done" && (
         <section className="rounded-lg border border-emerald-900/60 bg-emerald-950/40 p-4 text-sm text-emerald-200">
-          Install complete.
+          {t("install.complete")}
         </section>
       )}
     </div>

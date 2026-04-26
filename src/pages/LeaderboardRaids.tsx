@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { api, type RaidProgress } from "../api/cms";
+import { useT } from "../i18n/useT";
 
 export default function LeaderboardRaids() {
+  const t = useT();
   const [raids, setRaids] = useState<RaidProgress[]>([]);
   const [patch, setPatch] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
@@ -18,7 +20,7 @@ export default function LeaderboardRaids() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <div className="text-sm text-neutral-500">Loading…</div>;
+  if (loading) return <div className="text-sm text-neutral-500">{t("common.loading")}</div>;
   if (error)
     return (
       <div className="rounded border border-red-900/60 bg-red-950/40 p-3 text-sm text-red-200">
@@ -30,18 +32,18 @@ export default function LeaderboardRaids() {
     <div className="flex flex-col gap-6">
       {patch && (
         <div className="flex items-center gap-2 text-xs text-neutral-500">
-          <span>Content patch:</span>
+          <span>{t("lb.raids.contentPatch")}</span>
           <span className="rounded-full border border-violet-500/40 bg-violet-500/10 px-2 py-0.5 font-mono text-violet-200">
             {patch}
           </span>
           <span className="text-neutral-600">
-            (showing raids from this patch and earlier)
+            {t("lb.raids.showingFrom")}
           </span>
         </div>
       )}
       {raids.length === 0 ? (
         <div className="rounded border border-dashed border-neutral-800 p-8 text-center text-sm text-neutral-500">
-          No raid progression tracked yet.
+          {t("lb.raids.empty")}
         </div>
       ) : (
         raids.map((r) => {
@@ -58,7 +60,7 @@ export default function LeaderboardRaids() {
                   <div className="text-lg font-semibold">{r.raid}</div>
                   <div className="text-xs text-neutral-500">
                     {r.tier}
-                    {r.patch && <span className="ml-2">· patch {r.patch}</span>}
+                    {r.patch && <span className="ml-2">· {t("lb.raids.patch", { patch: r.patch })}</span>}
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
@@ -87,18 +89,14 @@ export default function LeaderboardRaids() {
                     <div className="flex items-baseline justify-between">
                       <span className="font-medium">{b.name}</span>
                       {b.killed ? (
-                        <span className="text-xs text-emerald-300">Down</span>
+                        <span className="text-xs text-emerald-300">{t("lb.raids.down")}</span>
                       ) : (
-                        <span className="text-xs text-neutral-500">Alive</span>
+                        <span className="text-xs text-neutral-500">{t("lb.col.alive")}</span>
                       )}
                     </div>
                     {b.firstKillGuild && (
                       <div className="mt-1 text-xs text-neutral-400">
-                        First kill:{" "}
-                        <span className="font-mono text-neutral-200">
-                          {b.firstKillGuild}
-                        </span>{" "}
-                        on {b.firstKillDate}
+                        {t("lb.raids.firstKill", { guild: b.firstKillGuild, date: b.firstKillDate ?? "" })}
                       </div>
                     )}
                   </li>

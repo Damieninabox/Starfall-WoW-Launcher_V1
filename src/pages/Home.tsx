@@ -11,6 +11,7 @@ import { api, type ExpansionApi } from "../api/cms";
 import { useLauncherStore, shouldClearCache } from "../state/launcher";
 import { useInstallerStore } from "../state/installer";
 import { useAuthStore } from "../state/auth";
+import { useT } from "../i18n/useT";
 import {
   AffixesCard,
   NewsCard,
@@ -42,6 +43,7 @@ const EXPANSION_BG: Record<string, string> = {
 
 export default function Home() {
   const navigate = useNavigate();
+  const t = useT();
   const {
     installDir,
     realmlistServer,
@@ -100,18 +102,16 @@ export default function Home() {
 
     try {
       setStep("checking-patches");
-      setMessage("Checking for updates…");
+      setMessage(t("home.checkingPatches"));
       const summary = await patcherCheck(installDir, manifestUrl);
       if (summary.filesToDownload > 0 || summary.filesToReplace > 0) {
         setStep("patching");
-        setMessage(
-          `Updating ${summary.filesToDownload + summary.filesToReplace} file(s)…`,
-        );
+        setMessage(t("home.patching"));
         await patcherRun(installDir, manifestUrl);
       }
 
       setStep("syncing-realmlist");
-      setMessage("Syncing realmlist…");
+      setMessage(t("home.syncingRealmlist"));
       const current = await realmlistRead(installDir);
       if (current.server !== realmlistServer) {
         await realmlistWrite(installDir, realmlistServer);
@@ -119,17 +119,17 @@ export default function Home() {
 
       if (shouldClearCache(cachePolicy, lastCacheClearMs)) {
         setStep("clearing-cache");
-        setMessage("Clearing cache…");
+        setMessage(t("home.clearingCache"));
         await cacheClear(installDir);
         markCacheClear();
       }
 
       setStep("launching");
-      setMessage("Launching Wow.exe…");
+      setMessage(t("home.launching"));
       await launchGame(installDir, launchArgs);
 
       setStep("running");
-      setMessage("Wow is running — good hunting.");
+      setMessage(t("home.running"));
     } catch (e) {
       setError(String(e));
       setStep("error");
@@ -149,21 +149,23 @@ export default function Home() {
       >
         <header className="flex flex-col gap-2">
           <h1 className="text-3xl font-semibold tracking-tight">
-            Welcome back, <span className="text-violet-200">{displayName ?? "stranger"}</span>.
+            {displayName
+              ? <>{t("home.welcomeBackPrefix")}<span className="text-violet-200">{displayName}</span>.</>
+              : t("home.welcomeBackStranger")}
           </h1>
           <p className="text-sm text-neutral-400">
             {installDir ? (
               <>
-                Install: <span className="font-mono text-neutral-300">{installDir}</span>
+                {t("home.installLabel")} <span className="font-mono text-neutral-300">{installDir}</span>
               </>
             ) : (
               <>
-                No install folder yet.{" "}
+                {t("home.noInstall")}{" "}
                 <button
                   onClick={() => navigate("/install")}
                   className="text-violet-300 underline underline-offset-2 hover:text-violet-200"
                 >
-                  Go to Install
+                  {t("home.goToInstall")}
                 </button>
               </>
             )}
@@ -172,14 +174,14 @@ export default function Home() {
 
         {!loadingExp && expansions.length === 0 && (
           <div className="mt-4 rounded border border-amber-900/60 bg-amber-950/30 p-3 text-sm text-amber-200">
-            No realms configured yet. Ask an admin to add one in the CMS.
+            {t("home.noRealms")}
           </div>
         )}
 
         {expansions.length > 1 && (
           <section className="mt-5">
             <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-neutral-400">
-              Realm
+              {t("home.realm")}
             </h2>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
               {expansions.map((exp) => {
@@ -212,7 +214,7 @@ export default function Home() {
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <div>
                 <div className="text-xs uppercase tracking-widest text-neutral-500">
-                  Playing
+                  {t("home.playing")}
                 </div>
                 <div className="text-xl font-semibold">
                   {activeExpansion.realmName ?? activeExpansion.name}
@@ -224,7 +226,7 @@ export default function Home() {
                 )}
               </div>
               <div className="text-sm text-neutral-400">
-                Realm:{" "}
+                {t("home.realmAddress")}{" "}
                 <span className="font-mono text-neutral-200">
                   {activeExpansion.realmlist ?? realmlistServer ?? "—"}
                 </span>
@@ -236,13 +238,13 @@ export default function Home() {
               disabled={running}
               className="self-start rounded-md bg-violet-500 px-10 py-2.5 text-base font-semibold text-neutral-950 transition-colors hover:bg-violet-400 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {running ? message : "Play"}
+              {running ? message : t("home.play")}
             </button>
 
             {step !== "idle" && step !== "error" && (
               <div className="rounded border border-neutral-800 bg-neutral-950 p-3 text-sm text-neutral-300">
                 <div className="mb-1 text-xs uppercase tracking-widest text-neutral-500">
-                  Status
+                  {t("home.status")}
                 </div>
                 {message}
               </div>
@@ -250,7 +252,7 @@ export default function Home() {
 
             {error && (
               <div className="rounded border border-red-900/60 bg-red-950/40 p-3 text-sm text-red-200">
-                <div className="font-semibold text-red-300">Couldn't launch</div>
+                <div className="font-semibold text-red-300">{t("home.couldNotLaunch")}</div>
                 <div className="mt-1 font-mono text-xs">{error}</div>
               </div>
             )}

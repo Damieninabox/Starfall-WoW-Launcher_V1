@@ -3,8 +3,10 @@ import { Navigate, useLocation } from "react-router-dom";
 import { hasToken, logout } from "../api/auth";
 import { api } from "../api/cms";
 import { useAuthStore } from "../state/auth";
+import { useT } from "../i18n/useT";
 
 export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const t = useT();
   const location = useLocation();
   const username = useAuthStore((s) => s.username);
   const setAuthed = useAuthStore((s) => s.setAuthed);
@@ -56,7 +58,7 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
   }, [clear, setAuthed, setAdmin, username]);
 
   if (!checked) {
-    return <div className="p-6 text-sm text-neutral-500">Checking session…</div>;
+    return <div className="p-6 text-sm text-neutral-500">{t("session.checking")}</div>;
   }
   if (!tokenOk || !username) {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;

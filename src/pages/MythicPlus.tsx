@@ -13,13 +13,18 @@ import {
   POOL_META,
   findAffix,
   iconUrlFor,
+  localizeAffix,
   type Affix,
   type AffixPool,
 } from "../lib/affixes";
+import { useT } from "../i18n/useT";
+import { useI18nStore } from "../i18n/store";
 
 type Tab = "leaderboard" | "affixes" | "dungeons";
 
 export default function MythicPlus() {
+  const t = useT();
+  const locale = useI18nStore((s) => s.locale);
   const [searchParams, setSearchParams] = useSearchParams();
   const initialTab = ((): Tab => {
     const t = searchParams.get("tab");
@@ -56,7 +61,7 @@ export default function MythicPlus() {
     <div className="flex flex-col gap-6">
       <header className="flex flex-wrap items-baseline justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold">Mythic+</h1>
+          <h1 className="text-2xl font-semibold">{t("mplus.title")}</h1>
           {season && (
             <div className="text-xs text-neutral-500">
               {season.name}
@@ -66,9 +71,10 @@ export default function MythicPlus() {
         </div>
         {affixes && (
           <div className="flex flex-wrap items-center gap-2 text-xs">
-            <span className="uppercase tracking-widest text-neutral-500">This week</span>
+            <span className="uppercase tracking-widest text-neutral-500">{t("mplus.thisWeek")}</span>
             {affixes.rotation.map((a) => {
               const resolved = findAffix({ id: a.id, name: a.name });
+              const localized = resolved ? localizeAffix(resolved, locale) : null;
               const color = resolved ? POOL_META[resolved.pool].color : "#7c3aed";
               return (
                 <span
@@ -88,7 +94,7 @@ export default function MythicPlus() {
                       draggable={false}
                     />
                   )}
-                  {a.name}
+                  {localized?.name ?? a.name}
                 </span>
               );
             })}
@@ -97,20 +103,26 @@ export default function MythicPlus() {
       </header>
 
       <div className="flex gap-1">
-        {(["leaderboard", "affixes", "dungeons"] as Tab[]).map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={[
-              "rounded px-4 py-2 text-sm capitalize",
-              tab === t
-                ? "bg-violet-500/20 text-violet-200 ring-1 ring-violet-400/40"
-                : "text-neutral-400 hover:bg-white/5 hover:text-neutral-100",
-            ].join(" ")}
-          >
-            {t}
-          </button>
-        ))}
+        {(["leaderboard", "affixes", "dungeons"] as Tab[]).map((tabId) => {
+          const labelKey =
+            tabId === "leaderboard" ? "mplus.tabLeaderboard" :
+            tabId === "affixes" ? "mplus.tabAffixes" :
+            "mplus.tabDungeons";
+          return (
+            <button
+              key={tabId}
+              onClick={() => setTab(tabId)}
+              className={[
+                "rounded px-4 py-2 text-sm capitalize",
+                tab === tabId
+                  ? "bg-violet-500/20 text-violet-200 ring-1 ring-violet-400/40"
+                  : "text-neutral-400 hover:bg-white/5 hover:text-neutral-100",
+              ].join(" ")}
+            >
+              {t(labelKey)}
+            </button>
+          );
+        })}
       </div>
 
       {error && (
@@ -124,7 +136,7 @@ export default function MythicPlus() {
           {dungeons.length > 0 && (
             <div className="flex flex-wrap gap-1">
               <Pill active={dungeonFilter === "all"} onClick={() => setDungeonFilter("all")}>
-                All dungeons
+                {t("mplus.allDungeons")}
               </Pill>
               {dungeons.map((d) => (
                 <Pill
@@ -139,7 +151,7 @@ export default function MythicPlus() {
           )}
           {filteredRuns.length === 0 ? (
             <div className="rounded border border-dashed border-neutral-800 p-8 text-center text-sm text-neutral-500">
-              No runs recorded yet this season.
+              {t("mplus.noRunsYet")}
             </div>
           ) : (
             <div className="overflow-hidden rounded-lg border border-neutral-800">
@@ -147,11 +159,11 @@ export default function MythicPlus() {
                 <thead className="bg-neutral-900/80">
                   <tr className="text-left text-xs uppercase tracking-widest text-neutral-500">
                     <th className="px-4 py-2">#</th>
-                    <th className="px-4 py-2">Character</th>
-                    <th className="px-4 py-2">Dungeon</th>
-                    <th className="px-4 py-2">Key</th>
-                    <th className="px-4 py-2">Timer</th>
-                    <th className="px-4 py-2 text-right">Score</th>
+                    <th className="px-4 py-2">{t("mplus.col.character")}</th>
+                    <th className="px-4 py-2">{t("mplus.col.dungeon")}</th>
+                    <th className="px-4 py-2">{t("mplus.col.key")}</th>
+                    <th className="px-4 py-2">{t("mplus.col.timer")}</th>
+                    <th className="px-4 py-2 text-right">{t("mplus.col.score")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-800 bg-neutral-950/40">
@@ -216,7 +228,7 @@ export default function MythicPlus() {
                 <div className="p-4">
                   <div className="text-sm font-semibold">{d.name}</div>
                   <div className="mt-1 text-xs text-neutral-500">
-                    Time limit · {Math.floor(d.timeLimitSec / 60)}:{String(d.timeLimitSec % 60).padStart(2, "0")}
+                    {t("mplus.timeLimit")} · {Math.floor(d.timeLimitSec / 60)}:{String(d.timeLimitSec % 60).padStart(2, "0")}
                   </div>
                 </div>
               </div>
@@ -224,7 +236,7 @@ export default function MythicPlus() {
           })}
           {dungeons.length === 0 && (
             <div className="col-span-full text-sm text-neutral-500">
-              No dungeons configured.
+              {t("mplus.noDungeons")}
             </div>
           )}
         </div>
@@ -234,18 +246,26 @@ export default function MythicPlus() {
 }
 
 function AffixesTab({ affixes }: { affixes: AffixesResponse }) {
+  const t = useT();
+  const locale = useI18nStore((s) => s.locale);
   const [showAll, setShowAll] = useState(false);
   const [libraryTab, setLibraryTab] = useState<AffixPool>("mid");
 
   // Resolve the server-authored rotation to our local lookup, split into pool triplet.
   const resolved = affixes.rotation
     .map((a) => findAffix({ id: a.id, name: a.name }))
-    .filter((a): a is Affix => a !== null);
+    .filter((a): a is Affix => a !== null)
+    .map((a) => localizeAffix(a, locale));
   const featured: Record<AffixPool, Affix | undefined> = {
     low: resolved.find((a) => a.pool === "low"),
     mid: resolved.find((a) => a.pool === "mid"),
     high: resolved.find((a) => a.pool === "high"),
   };
+
+  const poolLabelKey = (p: AffixPool) =>
+    p === "low" ? "mplus.poolLow" : p === "mid" ? "mplus.poolMid" : "mplus.poolHigh";
+  const poolRangeKey = (p: AffixPool) =>
+    p === "low" ? "mplus.poolLowRange" : p === "mid" ? "mplus.poolMidRange" : "mplus.poolHighRange";
 
   return (
     <div className="flex flex-col gap-6">
@@ -267,7 +287,7 @@ function AffixesTab({ affixes }: { affixes: AffixesResponse }) {
           onClick={() => setShowAll((s) => !s)}
           className="inline-flex items-center gap-2 rounded-full border border-white/10 px-5 py-2 text-[12px] font-bold uppercase tracking-wider text-white/50 transition-colors hover:border-white/25 hover:text-white/90"
         >
-          {showAll ? "Hide full library" : "View all 15 affixes"}
+          {showAll ? t("mplus.hideAll") : t("mplus.viewAll")}
           <span
             className={[
               "inline-block transition-transform",
@@ -297,15 +317,15 @@ function AffixesTab({ affixes }: { affixes: AffixesResponse }) {
                     color: isActive ? meta.color : "rgba(255,255,255,0.45)",
                   }}
                 >
-                  {meta.label}
-                  <span className="font-mono text-[10px] opacity-60">{meta.range}</span>
+                  {t(poolLabelKey(p))}
+                  <span className="font-mono text-[10px] opacity-60">{t(poolRangeKey(p))}</span>
                 </button>
               );
             })}
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
             {AFFIXES.filter((a) => a.pool === libraryTab).map((affix) => (
-              <LibraryAffixTile key={affix.id} affix={affix} />
+              <LibraryAffixTile key={affix.id} affix={localizeAffix(affix, locale)} />
             ))}
           </div>
         </div>
@@ -365,6 +385,7 @@ function LibraryAffixTile({ affix }: { affix: Affix }) {
 }
 
 function UnknownAffixCard({ pool }: { pool: AffixPool }) {
+  const t = useT();
   const meta = POOL_META[pool];
   return (
     <div
@@ -372,7 +393,7 @@ function UnknownAffixCard({ pool }: { pool: AffixPool }) {
       style={{ borderColor: `${meta.color}30` }}
     >
       <p className="text-xs text-white/40">
-        Waiting for the next rotation to be posted by the realm.
+        {t("mplus.unknownAffix")}
       </p>
     </div>
   );

@@ -9,7 +9,9 @@ import {
   type ServerStatus,
   type WorldEvent,
 } from "../api/cms";
-import { POOL_META, findAffix, iconUrlFor } from "../lib/affixes";
+import { POOL_META, findAffix, iconUrlFor, localizeAffix } from "../lib/affixes";
+import { useT } from "../i18n/useT";
+import { useI18nStore } from "../i18n/store";
 
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -23,6 +25,7 @@ function SectionCard({ title, children }: { title: string; children: React.React
 }
 
 export function ServerStatusCard() {
+  const t = useT();
   const [s, setS] = useState<ServerStatus | null>(null);
   useEffect(() => {
     const tick = () => api.serverStatus().then(setS).catch(() => {});
@@ -31,8 +34,8 @@ export function ServerStatusCard() {
     return () => clearInterval(id);
   }, []);
   return (
-    <SectionCard title="Server status">
-      {!s && <div className="text-sm text-neutral-500">Loading…</div>}
+    <SectionCard title={t("widget.serverStatus")}>
+      {!s && <div className="text-sm text-neutral-500">{t("common.loading")}</div>}
       {s && (
         <div className="flex flex-col gap-2 text-sm">
           <div className="flex items-center gap-2">
@@ -42,20 +45,20 @@ export function ServerStatusCard() {
                 s.online ? "bg-emerald-400" : "bg-red-500",
               ].join(" ")}
             />
-            <span className="font-medium">{s.online ? "Online" : "Offline"}</span>
+            <span className="font-medium">{s.online ? t("common.online") : t("common.offline")}</span>
             <span className="text-neutral-500">· {s.realm}</span>
           </div>
           <div className="grid grid-cols-2 gap-y-1 text-xs text-neutral-400">
             <div>
-              Pop:{" "}
+              {t("widget.population")}{" "}
               <span className="font-mono text-neutral-200">{s.population}</span>
             </div>
             <div>
-              Uptime:{" "}
+              {t("widget.uptime")}{" "}
               <span className="font-mono text-neutral-200">{s.uptimeHours}h</span>
             </div>
             <div>
-              TPS: <span className="font-mono text-neutral-200">{s.tps}</span>
+              {t("widget.tps")} <span className="font-mono text-neutral-200">{s.tps}</span>
             </div>
           </div>
         </div>
@@ -65,14 +68,15 @@ export function ServerStatusCard() {
 }
 
 export function NewsCard() {
+  const t = useT();
   const [n, setN] = useState<NewsEntry[]>([]);
   const [active, setActive] = useState<NewsEntry | null>(null);
   useEffect(() => {
     api.news().then((r) => setN(r.news)).catch(() => {});
   }, []);
   return (
-    <SectionCard title="News">
-      {n.length === 0 && <div className="text-sm text-neutral-500">No news.</div>}
+    <SectionCard title={t("widget.news")}>
+      {n.length === 0 && <div className="text-sm text-neutral-500">{t("widget.noNews")}</div>}
       <ul className="flex flex-col gap-3">
         {n.slice(0, 4).map((item) => (
           <li key={item.id}>
@@ -84,7 +88,7 @@ export function NewsCard() {
                 <div className="flex items-baseline gap-2">
                   {item.pinned && (
                     <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] uppercase tracking-widest text-amber-300">
-                      Pinned
+                      {t("widget.pinned")}
                     </span>
                   )}
                   <div className="text-sm font-medium group-hover:text-violet-200">
@@ -152,27 +156,31 @@ function NewsModal({ entry, onClose }: { entry: NewsEntry; onClose: () => void }
 }
 
 export function AffixesCard() {
+  const t = useT();
+  const locale = useI18nStore((s) => s.locale);
   const [a, setA] = useState<AffixesResponse | null>(null);
   useEffect(() => {
     api.affixes().then(setA).catch(() => {});
   }, []);
   return (
-    <SectionCard title="Mythic+ affixes">
-      {!a && <div className="text-sm text-neutral-500">Loading…</div>}
+    <SectionCard title={t("widget.affixes")}>
+      {!a && <div className="text-sm text-neutral-500">{t("common.loading")}</div>}
       {a && (
         <div className="flex flex-col gap-2">
-          <div className="text-xs text-neutral-500">Week {a.week.match(/W(\d+)/)?.[1] ?? a.week}</div>
+          <div className="text-xs text-neutral-500">{t("widget.week", { week: a.week.match(/W(\d+)/)?.[1] ?? a.week })}</div>
           {a.rotation.length === 0 ? (
             <div className="text-xs italic text-neutral-500">
-              Waiting for the next rotation.
+              {t("widget.waitingRotation")}
             </div>
           ) : (
             <ul className="flex flex-col gap-1.5">
               {a.rotation.map((api) => {
                 const resolved = findAffix({ id: api.id, name: api.name });
+                const localized = resolved ? localizeAffix(resolved, locale) : null;
                 const meta = resolved ? POOL_META[resolved.pool] : null;
                 const color = meta?.color ?? "#7c3aed";
-                const short = resolved?.short ?? api.description;
+                const short = localized?.short ?? api.description;
+                const displayName = localized?.name ?? api.name;
                 return (
                   <li
                     key={api.id}
@@ -198,7 +206,7 @@ export function AffixesCard() {
                     )}
                     <div className="min-w-0 flex-1">
                       <span className="truncate text-sm font-semibold text-neutral-100">
-                        {api.name}
+                        {displayName}
                       </span>
                       <p className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-neutral-400">
                         {short}
@@ -213,7 +221,7 @@ export function AffixesCard() {
             to="/leaderboards/mythicplus?tab=affixes"
             className="self-start text-xs text-violet-300 hover:text-violet-200"
           >
-            Full rotation →
+            {t("widget.fullRotation")}
           </Link>
         </div>
       )}
@@ -222,6 +230,7 @@ export function AffixesCard() {
 }
 
 export function WorldEventsCard() {
+  const t = useT();
   const [events, setEvents] = useState<WorldEvent[]>([]);
   useEffect(() => {
     api.worldEvents().then((r) => setEvents(r.events)).catch(() => {});
@@ -229,15 +238,15 @@ export function WorldEventsCard() {
   const active = events.filter((e) => e.active).slice(0, 3);
   const upcoming = events.filter((e) => !e.active).slice(0, 4);
   return (
-    <SectionCard title="In-game calendar">
+    <SectionCard title={t("widget.calendar")}>
       {events.length === 0 ? (
-        <div className="text-sm text-neutral-500">No scheduled events.</div>
+        <div className="text-sm text-neutral-500">{t("widget.noEvents")}</div>
       ) : (
         <div className="flex flex-col gap-3">
           {active.length > 0 && (
             <div>
               <div className="mb-1 text-[10px] uppercase tracking-widest text-emerald-300">
-                Happening now
+                {t("widget.happeningNow")}
               </div>
               <ul className="flex flex-col gap-1">
                 {active.map((ev) => (
@@ -249,7 +258,7 @@ export function WorldEventsCard() {
                       {ev.title}
                     </span>
                     <span className="whitespace-nowrap font-mono text-[10px] text-emerald-300">
-                      ends {new Date(ev.end).toLocaleDateString()}
+                      {t("widget.endsOn", { date: new Date(ev.end).toLocaleDateString() })}
                     </span>
                   </li>
                 ))}
@@ -259,7 +268,7 @@ export function WorldEventsCard() {
           {upcoming.length > 0 && (
             <div>
               <div className="mb-1 text-[10px] uppercase tracking-widest text-violet-300">
-                Upcoming
+                {t("widget.upcoming")}
               </div>
               <ul className="flex flex-col gap-1 text-xs">
                 {upcoming.map((ev) => (
@@ -280,7 +289,7 @@ export function WorldEventsCard() {
             to="/calendar"
             className="self-start text-xs text-violet-300 hover:text-violet-200"
           >
-            Full calendar →
+            {t("widget.fullCalendar")}
           </Link>
         </div>
       )}
@@ -289,6 +298,7 @@ export function WorldEventsCard() {
 }
 
 export function TopGuildsCard() {
+  const t = useT();
   const [guilds, setGuilds] = useState<
     { guildId: number; name: string; motd: string; memberCount: number }[]
   >([]);
@@ -296,9 +306,9 @@ export function TopGuildsCard() {
     api.topGuilds().then((r) => setGuilds(r.guilds)).catch(() => setGuilds([]));
   }, []);
   return (
-    <SectionCard title="Top guilds">
+    <SectionCard title={t("widget.topGuilds")}>
       {guilds.length === 0 ? (
-        <div className="text-sm text-neutral-500">No guilds tracked.</div>
+        <div className="text-sm text-neutral-500">{t("widget.noGuilds")}</div>
       ) : (
         <ul className="flex flex-col gap-2">
           {guilds.map((g) => (
@@ -317,7 +327,7 @@ export function TopGuildsCard() {
                 )}
               </div>
               <div className="whitespace-nowrap text-xs text-neutral-500">
-                {g.memberCount} members
+                {t("widget.members", { count: g.memberCount })}
               </div>
             </li>
           ))}

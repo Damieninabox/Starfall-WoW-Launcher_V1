@@ -7,6 +7,8 @@ import { useAuthStore } from "../state/auth";
 import { realmlistRead, cacheClear } from "../api/game";
 import { api, type SessionEntry, type Enroll2faResponse } from "../api/cms";
 import { logout } from "../api/auth";
+import { useI18nStore, type Locale } from "../i18n/store";
+import { useT } from "../i18n/useT";
 
 const CACHE_POLICIES: { value: CachePolicy; label: string; description: string }[] = [
   { value: "on-launch", label: "On every launch", description: "Clears Cache/ and WDB/ each time you press Play." },
@@ -17,6 +19,7 @@ const CACHE_POLICIES: { value: CachePolicy; label: string; description: string }
 
 export default function Settings() {
   const navigate = useNavigate();
+  const tFn = useT();
   const {
     installDir,
     realmlistServer,
@@ -188,10 +191,13 @@ export default function Settings() {
             onClick={doLogout}
             className="rounded border border-neutral-700 px-3 py-1 text-sm hover:bg-neutral-800"
           >
-            Sign out
+            {tFn("nav.signOut")}
           </button>
         </div>
       </section>
+
+      <LocaleSection />
+
 
       <Section title="Install folder">
         <div className="flex gap-2">
@@ -334,6 +340,51 @@ export default function Settings() {
       {status && <div className="text-xs text-emerald-300">{status}</div>}
       {error && <div className="text-xs text-red-300">{error}</div>}
     </div>
+  );
+}
+
+function LocaleSection() {
+  const t = useT();
+  const locale = useI18nStore((s) => s.locale);
+  const setLocale = useI18nStore((s) => s.setLocale);
+  const options: Array<{ id: Locale; flag: string; subtitle: string; nameKey: "locale.englishName" | "locale.germanName" }> = [
+    { id: "en", flag: "🇬🇧", subtitle: "English", nameKey: "locale.englishName" },
+    { id: "de", flag: "🇩🇪", subtitle: "Deutsch", nameKey: "locale.germanName" },
+  ];
+  return (
+    <section className="flex flex-col gap-3 rounded-lg border border-neutral-800 bg-neutral-900/60 p-4">
+      <div>
+        <div className="text-xs uppercase tracking-widest text-neutral-500">
+          {t("settings.locale.heading")}
+        </div>
+        <p className="mt-1 text-xs text-neutral-400">{t("settings.locale.description")}</p>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {options.map((opt) => {
+          const selected = locale === opt.id;
+          return (
+            <button
+              key={opt.id}
+              onClick={() => setLocale(opt.id)}
+              className={[
+                "flex items-center gap-3 rounded-md border px-4 py-2 text-sm transition-colors",
+                selected
+                  ? "border-violet-500 bg-violet-500/10 text-white"
+                  : "border-neutral-700 text-neutral-300 hover:border-neutral-500 hover:bg-white/5",
+              ].join(" ")}
+            >
+              <span className="text-2xl leading-none" aria-hidden="true">{opt.flag}</span>
+              <span className="flex flex-col items-start">
+                <span className="font-semibold">{t(opt.nameKey)}</span>
+                <span className="text-[10px] uppercase tracking-widest text-neutral-500">
+                  {opt.subtitle}
+                </span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 

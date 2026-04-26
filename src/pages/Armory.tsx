@@ -10,6 +10,7 @@ import {
   racePortrait,
   slotIcon,
 } from "../lib/icons";
+import { useT } from "../i18n/useT";
 
 /* ────────────────────────────────────────────────────── constants ── */
 
@@ -47,8 +48,14 @@ const LEFT_SLOTS = [0, 1, 2, 14, 4, 3, 18, 8];
 const RIGHT_SLOTS = [9, 5, 6, 7, 10, 11, 12, 13];
 const BOTTOM_SLOTS = [15, 16, 17];
 
-const TABS = ["Character", "Professions", "Dungeons & Raids", "Collections", "Reputation"] as const;
-type Tab = typeof TABS[number];
+type Tab = "Character" | "Professions" | "Dungeons & Raids" | "Collections" | "Reputation";
+const TABS: ReadonlyArray<{ id: Tab; key: "armory.tabs.character" | "armory.tabs.professions" | "armory.tabs.dungeonsRaids" | "armory.tabs.collections" | "armory.tabs.reputation" }> = [
+  { id: "Character",        key: "armory.tabs.character" },
+  { id: "Professions",      key: "armory.tabs.professions" },
+  { id: "Dungeons & Raids", key: "armory.tabs.dungeonsRaids" },
+  { id: "Collections",      key: "armory.tabs.collections" },
+  { id: "Reputation",       key: "armory.tabs.reputation" },
+];
 
 const POWER_TYPE: Record<number, { name: string; color: string }> = {
   1: { name: "Rage", color: "#c41f3b" },
@@ -138,6 +145,7 @@ function ItemTooltip({
 /* ──────────────────────────────────────────────────── main page ── */
 
 export default function Armory() {
+  const t = useT();
   const { name } = useParams<{ name: string }>();
   const [data, setData] = useState<ArmoryData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -182,22 +190,20 @@ export default function Armory() {
     return (
       <div className="mx-auto max-w-4xl">
         <Link to="/characters" className="text-sm text-[#d4a017] hover:text-[#d4a017]/80">
-          ← Back to Characters
+          {t("armory.back")}
         </Link>
         <div className="mt-16 text-center">
           <SwordsIcon size={48} className="mx-auto text-white/15" />
-          <h1 className="mt-4 text-2xl font-bold text-white/80">Character Not Found</h1>
+          <h1 className="mt-4 text-2xl font-bold text-white/80">{t("armory.notFound")}</h1>
           <p className="mt-2 text-sm text-white/50">
-            {is404
-              ? `No character named "${name}" on the realm (or this character is hidden from the public armory).`
-              : error}
+            {is404 ? t("armory.notFoundBody", { name: name ?? "" }) : error}
           </p>
         </div>
       </div>
     );
   }
   if (!data) {
-    return <div className="text-neutral-500">Loading armory…</div>;
+    return <div className="text-neutral-500">{t("armory.loading")}</div>;
   }
 
   return (
@@ -206,23 +212,23 @@ export default function Armory() {
         to="/characters"
         className="mb-4 inline-flex items-center gap-1 text-sm text-[#d4a017] hover:text-[#d4a017]/80"
       >
-        ← Back to Characters
+        {t("armory.back")}
       </Link>
 
       {/* Tab bar */}
       <div className="mb-6 flex gap-0 overflow-x-auto border-b-2 border-[#d4a017]">
         {TABS.map((tab) => (
           <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
             className={[
               "whitespace-nowrap px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors sm:px-6 sm:text-sm",
-              activeTab === tab
+              activeTab === tab.id
                 ? "bg-[#d4a017] text-black"
                 : "text-[#d4a017]/70 hover:bg-[#d4a017]/10 hover:text-[#d4a017]",
             ].join(" ")}
           >
-            {tab}
+            {t(tab.key)}
           </button>
         ))}
       </div>
@@ -250,18 +256,25 @@ function CharacterTab({
   data: ArmoryData;
   icons: Map<number, string>;
 }) {
+  const t = useT();
   const char = data.character;
   const raceName = RACE_NAMES[char.race] ?? `Race ${char.race}`;
   const className = CLASS_NAMES[char.class] ?? `Class ${char.class}`;
   const faction = factionOf(char.race);
   const factionColor = FACTION_COLOR[faction];
-  const gender = char.gender === 1 ? "Female" : "Male";
+  const gender = char.gender === 1 ? t("armory.gender.female") : t("armory.gender.male");
   const portrait = racePortrait(raceName, gender) ?? raceIcon(raceName);
   const portraitFallback = raceIcon(raceName);
   const classIconSrc = classIconColor(className) ?? classIcon(className);
   const classIconFallback = classIcon(className);
   const equipBySlot = new Map(data.equipment.map((e) => [e.slot, e]));
-  const power = POWER_TYPE[char.class] ?? defaultPower;
+  const powerRaw = POWER_TYPE[char.class] ?? defaultPower;
+  const powerName =
+    char.class === 1 ? t("armory.power.rage") :
+    char.class === 4 ? t("armory.power.energy") :
+    char.class === 6 ? t("armory.power.runic") :
+    t("armory.power.mana");
+  const power = { ...powerRaw, name: powerName };
 
   return (
     <div>
@@ -289,7 +302,7 @@ function CharacterTab({
           </h1>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <span className="rounded border border-[#4a3a1a]/40 bg-[#2a2a2a] px-2.5 py-1 text-xs font-bold text-white/80">
-              LEVEL {char.level}
+              {t("armory.level", { level: char.level })}
             </span>
             <span className="rounded border border-[#4a3a1a]/40 bg-[#2a2a2a] px-2.5 py-1 text-xs font-bold text-white/80">
               {raceName}
@@ -321,7 +334,7 @@ function CharacterTab({
             </span>
             {char.online && (
               <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-xs text-emerald-300">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> Online
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> {t("common.online")}
               </span>
             )}
           </div>
@@ -332,7 +345,7 @@ function CharacterTab({
       {data.stats && (
         <div className="mx-auto mb-6 max-w-sm space-y-1">
           <Bar
-            label="Health"
+            label={t("armory.statHealth")}
             value={data.stats.maxHealth}
             color="#22c55e"
             gradient="linear-gradient(to right, #166534, #22c55e)"
@@ -360,21 +373,21 @@ function CharacterTab({
           <div className="rounded-lg border border-[#2a2a2a] bg-[#0d0d0d]/60 p-4">
             {data.stats ? (
               <>
-                <SectionHeading>Base Statistics</SectionHeading>
+                <SectionHeading>{t("armory.baseStats")}</SectionHeading>
                 <div className="space-y-2">
                   {(
                     [
-                      ["Health", data.stats.maxHealth, "#22c55e"],
-                      ["Strength", data.stats.strength, "#c79c6e"],
-                      ["Agility", data.stats.agility, "#fff569"],
-                      ["Stamina", data.stats.stamina, "#ff7d0a"],
-                      ["Intellect", data.stats.intellect, "#69ccf0"],
-                      ["Spirit", data.stats.spirit, "#f58cba"],
-                      ["Armor", data.stats.armor, "#c0c0c0"],
-                      ["Attack Power", data.stats.attackPower, "#c41f3b"],
-                      ["Spell Power", data.stats.spellPower, "#69ccf0"],
-                      ["Crit", `${data.stats.critPct}%`, "#ff7d0a"],
-                      ["Resilience", data.stats.resilience, "#a335ee"],
+                      [t("armory.statHealth"), data.stats.maxHealth, "#22c55e"],
+                      [t("armory.strength"), data.stats.strength, "#c79c6e"],
+                      [t("armory.agility"), data.stats.agility, "#fff569"],
+                      [t("armory.stamina"), data.stats.stamina, "#ff7d0a"],
+                      [t("armory.intellect"), data.stats.intellect, "#69ccf0"],
+                      [t("armory.spirit"), data.stats.spirit, "#f58cba"],
+                      [t("armory.statArmor"), data.stats.armor, "#c0c0c0"],
+                      [t("armory.attackPower"), data.stats.attackPower, "#c41f3b"],
+                      [t("armory.spellPower"), data.stats.spellPower, "#69ccf0"],
+                      [t("armory.crit"), `${data.stats.critPct}%`, "#ff7d0a"],
+                      [t("armory.resilience"), data.stats.resilience, "#a335ee"],
                     ] as [string, string | number, string][]
                   ).map(([label, value, color]) => (
                     <div
@@ -394,9 +407,9 @@ function CharacterTab({
                 <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full border border-[#333] bg-[#1a1a1a]">
                   <SwordsIcon size={28} className="text-white/15" />
                 </div>
-                <p className="text-sm font-medium text-white/30">Model Preview</p>
+                <p className="text-sm font-medium text-white/30">{t("armory.modelPreview")}</p>
                 <p className="mt-1 text-xs text-white/15">
-                  Character must log in to populate stats
+                  {t("armory.modelPreviewHint")}
                 </p>
               </div>
             )}
@@ -420,25 +433,25 @@ function CharacterTab({
 
       {/* Account totals — always useful and now rendered with currency icons */}
       <div className="mt-8">
-        <SectionHeading>Account Totals</SectionHeading>
+        <SectionHeading>{t("armory.accountTotals")}</SectionHeading>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <CurrencyStat
-            label="Honor"
+            label={t("armory.honor")}
             value={char.honorPoints.toLocaleString("en-US")}
             icon={faction === "Horde" ? CURRENCY_ICONS.honorHorde : CURRENCY_ICONS.honorAlliance}
           />
           <CurrencyStat
-            label="Conquest"
+            label={t("armory.conquest")}
             value={char.conquestPoints.toLocaleString("en-US")}
             icon={faction === "Horde" ? CURRENCY_ICONS.conquestHorde : CURRENCY_ICONS.conquestAlliance}
           />
           <CurrencyStat
-            label="HKs"
+            label={t("armory.hks")}
             value={char.totalKills.toLocaleString("en-US")}
             icon={CURRENCY_ICONS.kills}
           />
           <CurrencyStat
-            label="Played"
+            label={t("armory.played")}
             value={formatPlayed(char.totaltime)}
             icon={CURRENCY_ICONS.played}
           />
@@ -449,12 +462,13 @@ function CharacterTab({
 }
 
 function ProfessionsTab({ professions }: { professions: ArmoryData["professions"] }) {
+  const t = useT();
   if (professions.length === 0) {
-    return <p className="py-12 text-center text-white/30">No professions learned.</p>;
+    return <p className="py-12 text-center text-white/30">{t("armory.noProfessions")}</p>;
   }
   return (
     <div className="mx-auto max-w-lg">
-      <SectionHeading>Professions</SectionHeading>
+      <SectionHeading>{t("armory.professions")}</SectionHeading>
       <div className="space-y-4">
         {professions.map((prof) => (
           <div key={prof.name} className="flex items-center gap-4">
@@ -489,14 +503,15 @@ function DungeonsRaidsTab({
   mythicPlus: ArmoryData["mythicPlus"];
   raidProgress: ArmoryData["raidProgress"];
 }) {
+  const t = useT();
   const mythicRating = mythicPlus.allTimeHighest * mythicPlus.totalRuns;
 
   return (
     <div>
       <div className="mb-8">
-        <SectionHeading>Raid Progression</SectionHeading>
+        <SectionHeading>{t("armory.raidProgression")}</SectionHeading>
         {raidProgress.length === 0 ? (
-          <p className="py-6 text-center text-white/30">No raid progression recorded.</p>
+          <p className="py-6 text-center text-white/30">{t("armory.noRaids")}</p>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {raidProgress.map((raid) => (
@@ -519,8 +534,8 @@ function DungeonsRaidsTab({
                 <div className="px-3 pt-2 pb-3">
                   <h3 className="mb-2.5 text-sm font-bold text-white">{raid.raidName}</h3>
                   <div className="space-y-1.5">
-                    <RaidProgressBar killed={raid.normalKills} total={raid.totalBosses} label="Normal" />
-                    <RaidProgressBar killed={raid.heroicKills} total={raid.totalBosses} label="Heroic" />
+                    <RaidProgressBar killed={raid.normalKills} total={raid.totalBosses} label={t("armory.normal")} />
+                    <RaidProgressBar killed={raid.heroicKills} total={raid.totalBosses} label={t("armory.heroic")} />
                   </div>
                 </div>
               </div>
@@ -530,12 +545,12 @@ function DungeonsRaidsTab({
       </div>
 
       <div>
-        <SectionHeading>Mythic+ Rating</SectionHeading>
+        <SectionHeading>{t("armory.mythicPlusRating")}</SectionHeading>
         <p className="mb-4 text-center text-4xl font-bold text-white/80">{mythicRating}</p>
         <div className="grid gap-3 sm:grid-cols-3">
-          <MiniStat label="All-time best" value={`+${mythicPlus.allTimeHighest}`} />
-          <MiniStat label="Total runs" value={mythicPlus.totalRuns.toString()} />
-          <MiniStat label="Tracked weeks" value={mythicPlus.history.length.toString()} />
+          <MiniStat label={t("armory.allTimeBest")} value={`+${mythicPlus.allTimeHighest}`} />
+          <MiniStat label={t("armory.totalRuns")} value={mythicPlus.totalRuns.toString()} />
+          <MiniStat label={t("armory.trackedWeeks")} value={mythicPlus.history.length.toString()} />
         </div>
         {mythicPlus.history.length > 0 && (
           <ul className="mt-4 space-y-1">
@@ -544,10 +559,10 @@ function DungeonsRaidsTab({
                 key={w.week}
                 className="flex items-center justify-between rounded border border-white/[0.04] bg-[#0d0d1a] px-3 py-1.5 text-xs"
               >
-                <span className="text-white/50">Week {w.week}</span>
+                <span className="text-white/50">{t("armory.weekN", { n: w.week })}</span>
                 <span className="font-mono text-[#d4a017]">+{w.highestKey}</span>
                 <span className="text-white/50">
-                  {w.runs} run{w.runs === 1 ? "" : "s"}
+                  {t(w.runs === 1 ? "armory.runs.one" : "armory.runs.many", { count: w.runs })}
                 </span>
               </li>
             ))}
@@ -559,28 +574,30 @@ function DungeonsRaidsTab({
 }
 
 function CollectionsTab({ collections }: { collections: ArmoryData["collections"] }) {
+  const t = useT();
   const [which, setWhich] = useState<"Mounts" | "Companions">("Mounts");
   const items = which === "Mounts" ? collections.mounts : collections.companions;
+  const labelFor = (k: "Mounts" | "Companions") => k === "Mounts" ? t("armory.mounts") : t("armory.companions");
   return (
     <div>
       <div className="mb-6 flex justify-center gap-2">
-        {(["Mounts", "Companions"] as const).map((t) => (
+        {(["Mounts", "Companions"] as const).map((tab) => (
           <button
-            key={t}
-            onClick={() => setWhich(t)}
+            key={tab}
+            onClick={() => setWhich(tab)}
             className={[
               "rounded px-4 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors",
-              which === t
+              which === tab
                 ? "bg-[#d4a017] text-black"
                 : "text-[#d4a017]/70 hover:bg-[#d4a017]/10 hover:text-[#d4a017]",
             ].join(" ")}
           >
-            {t} ({t === "Mounts" ? collections.mounts.length : collections.companions.length})
+            {labelFor(tab)} ({tab === "Mounts" ? collections.mounts.length : collections.companions.length})
           </button>
         ))}
       </div>
       {items.length === 0 ? (
-        <p className="py-12 text-center text-white/30">No {which.toLowerCase()} collected.</p>
+        <p className="py-12 text-center text-white/30">{t("armory.noCollection", { kind: labelFor(which) })}</p>
       ) : (
         <div className="grid grid-cols-6 gap-2 sm:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12">
           {items.map((it) => (
@@ -613,12 +630,13 @@ function CollectionsTab({ collections }: { collections: ArmoryData["collections"
 }
 
 function ReputationTab({ reputations }: { reputations: ArmoryData["reputations"] }) {
+  const t = useT();
   if (reputations.length === 0) {
-    return <p className="py-12 text-center text-white/30">No reputation tracked yet.</p>;
+    return <p className="py-12 text-center text-white/30">{t("armory.noReputation")}</p>;
   }
   return (
     <div className="mx-auto max-w-2xl">
-      <SectionHeading>Reputations</SectionHeading>
+      <SectionHeading>{t("armory.reputations")}</SectionHeading>
       <div className="space-y-1">
         {reputations.map((r) => (
           <div

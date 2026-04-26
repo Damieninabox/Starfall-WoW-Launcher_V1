@@ -3,9 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { login, login2fa } from "../api/auth";
 import { api } from "../api/cms";
 import { useAuthStore } from "../state/auth";
+import { useT } from "../i18n/useT";
 
 export default function Login() {
   const navigate = useNavigate();
+  const t = useT();
   const { pendingToken, username: pendingUsername, setPending, setAuthed } = useAuthStore();
 
   const [username, setUsername] = useState(pendingUsername ?? "");
@@ -88,7 +90,7 @@ export default function Login() {
       {!showing2fa && (
         <form onSubmit={submitLogin} className="flex flex-col gap-3 rounded-lg border border-violet-500/20 bg-neutral-900/60 p-6">
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-neutral-400">Username</span>
+            <span className="text-neutral-400">{t("login.username")}</span>
             <input
               value={username}
               onChange={(e) => setUsername(e.currentTarget.value)}
@@ -98,7 +100,7 @@ export default function Login() {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-neutral-400">Password</span>
+            <span className="text-neutral-400">{t("login.password")}</span>
             <input
               type="password"
               value={password}
@@ -114,14 +116,14 @@ export default function Login() {
               onChange={(e) => setRemember(e.currentTarget.checked)}
               className="h-4 w-4 accent-violet-500"
             />
-            Stay signed in on this device
+            {t("login.remember")}
           </label>
           <button
             type="submit"
             disabled={busy}
             className="mt-2 rounded bg-violet-500 px-4 py-2 text-sm font-semibold text-neutral-950 hover:bg-violet-400 disabled:opacity-50"
           >
-            {busy ? "Signing in…" : "Sign in"}
+            {busy ? t("login.signing") : t("login.submit")}
           </button>
         </form>
       )}
@@ -132,7 +134,7 @@ export default function Login() {
             Two-factor required for <span className="font-mono">{pendingUsername}</span>.
           </div>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-neutral-400">6-digit code</span>
+            <span className="text-neutral-400">{t("login.code2fa")}</span>
             <input
               value={code}
               onChange={(e) => setCode(e.currentTarget.value)}
@@ -149,7 +151,7 @@ export default function Login() {
             disabled={busy}
             className="mt-2 rounded bg-violet-500 px-4 py-2 text-sm font-semibold text-neutral-950 hover:bg-violet-400 disabled:opacity-50"
           >
-            {busy ? "Verifying…" : "Verify"}
+            {busy ? t("login.checking2fa") : t("login.verify2fa")}
           </button>
           <button
             type="button"

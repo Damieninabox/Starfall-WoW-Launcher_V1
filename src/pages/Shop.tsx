@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { api, type ShopCategory, type ShopItem } from "../api/cms";
+import { useT } from "../i18n/useT";
 
 export default function Shop() {
+  const t = useT();
   const [cats, setCats] = useState<ShopCategory[]>([]);
   const [items, setItems] = useState<ShopItem[]>([]);
   const [activeCat, setActiveCat] = useState<number | "all">("all");
@@ -24,14 +26,14 @@ export default function Shop() {
     [items, activeCat],
   );
 
-  if (loading) return <div className="text-neutral-500">Loading shop…</div>;
+  if (loading) return <div className="text-neutral-500">{t("shop.loading")}</div>;
 
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-semibold">Shop</h1>
+        <h1 className="text-2xl font-semibold">{t("shop.title")}</h1>
         <p className="text-sm text-neutral-400">
-          Spend your Vote Points (VP) or Donation Points (DP).
+          {t("shop.subtitle")}
         </p>
       </div>
 
@@ -44,7 +46,7 @@ export default function Shop() {
       {cats.length > 0 && (
         <div className="flex flex-wrap gap-1">
           <CatPill active={activeCat === "all"} onClick={() => setActiveCat("all")}>
-            All
+            {t("shop.all")}
           </CatPill>
           {cats.map((c) => (
             <CatPill
@@ -60,7 +62,7 @@ export default function Shop() {
 
       {items.length === 0 ? (
         <div className="rounded border border-dashed border-neutral-800 p-8 text-center text-sm text-neutral-500">
-          No items in the shop yet.
+          {t("shop.empty")}
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -102,7 +104,7 @@ export default function Shop() {
                   </span>
                 )}
                 <button className="ml-auto rounded bg-violet-500 px-3 py-1 text-sm font-semibold text-neutral-950 hover:bg-violet-400">
-                  Buy
+                  {t("shop.buy")}
                 </button>
               </div>
             </article>

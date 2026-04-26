@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { api, type WorldEvent } from "../api/cms";
+import { useT } from "../i18n/useT";
 
 export default function Calendar() {
+  const t = useT();
   const [events, setEvents] = useState<WorldEvent[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -21,7 +23,7 @@ export default function Calendar() {
     [events],
   );
 
-  if (loading) return <div className="text-neutral-500">Loading calendar…</div>;
+  if (loading) return <div className="text-neutral-500">{t("calendar.loading")}</div>;
   if (error)
     return (
       <div className="rounded border border-red-900/60 bg-red-950/40 p-3 text-sm text-red-200">
@@ -32,21 +34,20 @@ export default function Calendar() {
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-6">
       <header>
-        <h1 className="text-2xl font-semibold">In-game calendar</h1>
+        <h1 className="text-2xl font-semibold">{t("calendar.title")}</h1>
         <p className="text-sm text-neutral-400">
-          Live world events pulled straight from{" "}
-          <span className="font-mono">game_event</span>.
+          {t("calendar.subtitle", { table: "game_event" })}
         </p>
       </header>
 
       {active.length > 0 && (
         <section className="flex flex-col gap-3">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-emerald-300">
-            Happening now
+            {t("calendar.happeningNow")}
           </h2>
           <ul className="flex flex-col gap-2">
             {active.map((ev) => (
-              <EventRow key={`a-${ev.id}`} ev={ev} now={now} highlight />
+              <EventRow key={`a-${ev.id}`} ev={ev} now={now} highlight t={t} />
             ))}
           </ul>
         </section>
@@ -54,16 +55,16 @@ export default function Calendar() {
 
       <section className="flex flex-col gap-3">
         <h2 className="text-xs font-semibold uppercase tracking-widest text-violet-300">
-          Upcoming
+          {t("calendar.upcoming")}
         </h2>
         {upcoming.length === 0 ? (
           <div className="rounded border border-dashed border-neutral-800 p-6 text-center text-sm text-neutral-500">
-            Nothing scheduled.
+            {t("calendar.nothing")}
           </div>
         ) : (
           <ul className="flex flex-col gap-2">
             {upcoming.map((ev) => (
-              <EventRow key={`u-${ev.id}`} ev={ev} now={now} />
+              <EventRow key={`u-${ev.id}`} ev={ev} now={now} t={t} />
             ))}
           </ul>
         )}
@@ -76,15 +77,19 @@ function EventRow({
   ev,
   now,
   highlight,
+  t,
 }: {
   ev: WorldEvent;
   now: number;
   highlight?: boolean;
+  t: (key: Parameters<ReturnType<typeof import("../i18n/useT").useT>>[0], params?: Record<string, string | number>) => string;
 }) {
   const start = new Date(ev.start);
   const end = new Date(ev.end);
   const delta = (highlight ? end.getTime() : start.getTime()) - now;
-  const label = highlight ? `ends in ${formatDelta(delta)}` : `in ${formatDelta(delta)}`;
+  const label = highlight
+    ? t("calendar.endsIn", { delta: formatDelta(delta) })
+    : t("calendar.startsIn", { delta: formatDelta(delta) });
   return (
     <li
       className={[
@@ -100,7 +105,7 @@ function EventRow({
           {start.toLocaleString()} → {end.toLocaleString()}
           {ev.recurs && (
             <span className="ml-2 rounded-full border border-neutral-700 px-2 py-0.5 text-[10px] uppercase tracking-widest">
-              every {formatDuration(ev.occurrenceMin)}
+              {t("calendar.every", { duration: formatDuration(ev.occurrenceMin) })}
             </span>
           )}
         </div>

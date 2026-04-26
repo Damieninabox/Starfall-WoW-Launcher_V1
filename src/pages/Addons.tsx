@@ -2,8 +2,10 @@ import { useEffect, useState } from "react";
 import { api, type Addon } from "../api/cms";
 import { addonListEnabled, addonSetEnabled } from "../api/game";
 import { useLauncherStore } from "../state/launcher";
+import { useT } from "../i18n/useT";
 
 export default function Addons() {
+  const t = useT();
   const installDir = useLauncherStore((s) => s.installDir);
   const [addons, setAddons] = useState<Addon[]>([]);
   const [disabled, setDisabled] = useState<Set<string>>(new Set());
@@ -24,7 +26,7 @@ export default function Addons() {
 
   const toggle = async (a: Addon) => {
     if (!installDir) {
-      setError("No install folder — open Install first.");
+      setError(t("addons.noInstallErr"));
       return;
     }
     setError(null);
@@ -36,9 +38,10 @@ export default function Addons() {
       const wantEnabled = disabled.has(a.id); // currently off → want on
       const r = await addonSetEnabled(installDir, a.id, wantEnabled);
       setStatus(
-        `${a.name}: ${wantEnabled ? "enabled" : "disabled"} (${r.filesRenamed} file${
-          r.filesRenamed === 1 ? "" : "s"
-        } renamed)`,
+        t(wantEnabled ? "addons.toggled.enabled" : "addons.toggled.disabled", {
+          name: a.name,
+          count: r.filesRenamed,
+        }),
       );
       const d = new Set(disabled);
       if (wantEnabled) d.delete(a.id);
@@ -55,14 +58,12 @@ export default function Addons() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-2xl font-semibold">Addons</h1>
+      <h1 className="text-2xl font-semibold">{t("addons.title")}</h1>
       {error && <div className="text-red-300">{error}</div>}
       {status && <div className="text-xs text-emerald-300">{status}</div>}
       {!installDir && (
         <div className="rounded border border-amber-900/60 bg-amber-950/30 p-3 text-sm text-amber-200">
-          Pick an install folder in{" "}
-          <span className="font-mono">Install</span> or{" "}
-          <span className="font-mono">Settings</span> to manage addons.
+          {t("addons.noInstall")}
         </div>
       )}
       <ul className="flex flex-col gap-2">
@@ -82,7 +83,7 @@ export default function Addons() {
                   </span>
                   <span className="text-xs text-neutral-500">v{a.version}</span>
                   <span className="ml-auto rounded-full bg-violet-500/20 px-2 py-0.5 text-[10px] uppercase tracking-widest text-violet-200">
-                    Managed
+                    {t("addons.managed")}
                   </span>
                 </div>
                 <div className="mt-1 text-xs text-neutral-400">{a.description}</div>
@@ -98,15 +99,14 @@ export default function Addons() {
                   "disabled:opacity-50",
                 ].join(" ")}
               >
-                {isPending ? "…" : isDisabled ? "Enable" : "Disable"}
+                {isPending ? "…" : isDisabled ? t("addons.enable") : t("addons.disable")}
               </button>
             </li>
           );
         })}
       </ul>
       <div className="text-xs text-neutral-500">
-        Disabled addons have their <span className="font-mono">.toc</span> renamed to{" "}
-        <span className="font-mono">.toc.disabled</span> so WoW skips them.
+        {t("addons.note")}
       </div>
     </div>
   );

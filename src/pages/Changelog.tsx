@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, type ChangelogEntry } from "../api/cms";
+import { useT } from "../i18n/useT";
 
 const CATEGORY_STYLES: Record<string, string> = {
   feature: "border-emerald-500/40 bg-emerald-500/10 text-emerald-200",
@@ -10,6 +11,7 @@ const CATEGORY_STYLES: Record<string, string> = {
 };
 
 export default function Changelog() {
+  const t = useT();
   const [entries, setEntries] = useState<ChangelogEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -22,7 +24,7 @@ export default function Changelog() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <div className="text-neutral-500">Loading changelog…</div>;
+  if (loading) return <div className="text-neutral-500">{t("changelog.loading")}</div>;
   if (error)
     return (
       <div className="rounded border border-red-900/60 bg-red-950/40 p-3 text-sm text-red-200">
@@ -33,13 +35,13 @@ export default function Changelog() {
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-6">
       <header>
-        <h1 className="text-2xl font-semibold">Changelog</h1>
-        <p className="text-sm text-neutral-400">Recent patches and updates.</p>
+        <h1 className="text-2xl font-semibold">{t("changelog.title")}</h1>
+        <p className="text-sm text-neutral-400">{t("changelog.subtitle")}</p>
       </header>
 
       {entries.length === 0 ? (
         <div className="rounded border border-dashed border-neutral-800 p-8 text-center text-sm text-neutral-500">
-          No changelog entries yet.
+          {t("changelog.empty")}
         </div>
       ) : (
         <ul className="flex flex-col gap-4">

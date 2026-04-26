@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, type Character } from "../api/cms";
+import { useT } from "../i18n/useT";
 import {
   classIcon,
   classIconColor,
@@ -23,6 +24,7 @@ const CLASS_COLORS: Record<string, string> = {
 };
 
 export default function Characters() {
+  const t = useT();
   const [chars, setChars] = useState<Character[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -39,16 +41,16 @@ export default function Characters() {
   }, []);
 
   if (error) return <div className="text-red-300">{error}</div>;
-  if (!chars) return <div className="text-neutral-500">Loading characters…</div>;
+  if (!chars) return <div className="text-neutral-500">{t("characters.loading")}</div>;
   if (chars.length === 0)
-    return <div className="text-neutral-500">No characters on this account yet.</div>;
+    return <div className="text-neutral-500">{t("characters.empty")}</div>;
 
   const byRealm = groupBy(chars, (c) => c.realm);
 
   return (
     <div className="flex flex-col gap-6">
       <div className="text-xs text-neutral-500">
-        {chars.length} character{chars.length === 1 ? "" : "s"} · click to open armory
+        {t("characters.summary", { count: chars.length, plural: chars.length === 1 ? "" : "s" })}
       </div>
       {Array.from(byRealm.entries()).map(([realm, list]) => (
         <section key={realm}>

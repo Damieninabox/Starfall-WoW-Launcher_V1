@@ -19,29 +19,35 @@ import Addons from "./pages/Addons";
 import Admin from "./pages/Admin";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Starfield from "./components/Starfield";
+import LocalePicker from "./components/LocalePicker";
 import { useAuthStore } from "./state/auth";
+import { useI18nStore } from "./i18n/store";
+import { useT } from "./i18n/useT";
 
-const navItems = [
-  { to: "/home", label: "Home" },
-  { to: "/characters", label: "Characters" },
-  { to: "/leaderboards", label: "Leaderboards" },
-  { to: "/calendar", label: "Calendar" },
-  { to: "/transmog", label: "Transmog" },
-  { to: "/shop", label: "Shop" },
-  { to: "/addons", label: "Addons" },
-  { to: "/install", label: "Install" },
-  { to: "/settings", label: "Settings" },
+type NavSpec = { to: string; key: Parameters<ReturnType<typeof useT>>[0] };
+
+const navItems: NavSpec[] = [
+  { to: "/home", key: "nav.home" },
+  { to: "/characters", key: "nav.characters" },
+  { to: "/leaderboards", key: "nav.leaderboards" },
+  { to: "/calendar", key: "nav.calendar" },
+  { to: "/transmog", key: "nav.transmog" },
+  { to: "/shop", key: "nav.shop" },
+  { to: "/addons", key: "nav.addons" },
+  { to: "/install", key: "nav.install" },
+  { to: "/settings", key: "nav.settings" },
 ];
 
-const secondary = [
-  { to: "/vote", label: "Vote" },
-  { to: "/changelog", label: "Changelog" },
+const secondary: NavSpec[] = [
+  { to: "/vote", key: "nav.vote" },
+  { to: "/changelog", key: "nav.changelog" },
 ];
 
 function Shell({ children }: { children: React.ReactNode }) {
   const displayName = useAuthStore((s) => s.displayName);
   const isAdmin = useAuthStore((s) => s.isAdmin);
   const clearAuth = useAuthStore((s) => s.clear);
+  const t = useT();
   const navigate = useNavigate();
   const handleLogout = async () => {
     try {
@@ -74,7 +80,7 @@ function Shell({ children }: { children: React.ReactNode }) {
                 ].join(" ")
               }
             >
-              {item.label}
+              {t(item.key)}
             </NavLink>
           ))}
         </nav>
@@ -91,7 +97,7 @@ function Shell({ children }: { children: React.ReactNode }) {
                 ].join(" ")
               }
             >
-              Admin
+              {t("nav.admin")}
             </NavLink>
           )}
           <div className="flex gap-2">
@@ -108,7 +114,7 @@ function Shell({ children }: { children: React.ReactNode }) {
                   ].join(" ")
                 }
               >
-                {item.label}
+                {t(item.key)}
               </NavLink>
             ))}
           </div>
@@ -119,8 +125,8 @@ function Shell({ children }: { children: React.ReactNode }) {
               </div>
               <button
                 onClick={handleLogout}
-                title="Sign out"
-                aria-label="Sign out"
+                title={t("nav.signOut")}
+                aria-label={t("nav.signOut")}
                 className="flex h-7 w-7 items-center justify-center rounded-full border border-neutral-700 text-neutral-400 transition-colors hover:border-red-500/60 hover:bg-red-500/10 hover:text-red-300"
               >
                 <svg
@@ -188,10 +194,15 @@ function AppRoutes() {
 }
 
 export default function App() {
+  // First-run language picker is layered above EVERYTHING — login screen
+  // included — so the user can pick their language before anything else
+  // appears, and only then does the locale store influence rendering.
+  const hasChosenLocale = useI18nStore((s) => s.hasChosen);
   return (
     <>
       <Starfield />
       <AppRoutes />
+      {!hasChosenLocale && <LocalePicker />}
     </>
   );
 }

@@ -110,6 +110,70 @@ export function iconUrlFor(a: Affix): string {
   return `https://wow.zamimg.com/images/wow/icons/large/${a.iconName}.jpg`;
 }
 
+// German overrides for the per-affix copy. Any field omitted falls back to
+// the English entry above. Names match the spell123.sql translations from the
+// server's localized Spell.dbc.
+export const AFFIXES_DE: Record<number, Partial<Pick<Affix, 'name' | 'short' | 'detail' | 'flavor'>>> = {
+  1:  { name: 'Verstärkt', short: 'Trash hat 20% mehr Leben und verursacht 30% mehr Schaden.',
+        detail: 'Normale Gegner haben 20% mehr Leben und verursachen 30% mehr Schaden. Plant eure Pulls sorgfältig — Trash wird zur eigentlichen Gefahr.',
+        flavor: 'Die Mauern halten stand. Die Wachen halten fester.' },
+  2:  { name: 'Tyrannisch', short: 'Bosse haben 30% mehr Leben und schlagen 15% härter.',
+        detail: 'Bosse haben 30% mehr Leben und ihre Fähigkeiten verursachen 15% mehr Schaden. Boss-DPS, Überleben und Execute-Phasen werden wichtiger denn je.',
+        flavor: 'Der Herr der Halle duldet keine Herausforderer.' },
+  3:  { name: 'Rasend', short: 'Normale Gegner geraten bei 30% Leben in Raserei – immun gegen CC.',
+        detail: 'Normale Gegner geraten bei 30% Leben in Raserei und sind kurzzeitig immun gegen Kontrolleffekte. Nieder mit ihnen oder Distanz halten — CC rettet euch nicht.',
+        flavor: 'Schmerz nährt nur das Feuer.' },
+  4:  { name: 'Anstachelnd', short: 'Tötung eines Gegners stärkt umliegende Verbündete.',
+        detail: 'Wenn ein normaler Gegner stirbt, stärkt er nahegelegene Verbündete und erhöht deren maximales Leben und Schaden. Bringt Packs gemeinsam runter.',
+        flavor: 'Trauer macht die Lebenden stärker.' },
+  5:  { name: 'Blutig', short: 'Leichen hinterlassen Pfützen, die Feinde heilen und Spielern schaden.',
+        detail: 'Wenn ein normaler Gegner stirbt, hinterlässt er eine Blutpfütze, die Gegner heilt und Spielern Schaden zufügt. Vorsichtig kiten.',
+        flavor: 'Der Boden läuft rot, und das Rot läuft zurück.' },
+  6:  { name: 'Ausbruch', short: 'Erschlagene Gegner explodieren – stapelbarer DoT auf die Gruppe.',
+        detail: 'Beim Tod explodieren normale Gegner und legen einen stapelbaren Schaden-über-Zeit-Effekt auf alle Spieler. Hört auf zu chainkillen, wenn die Stapel zu hoch werden.',
+        flavor: 'Jeder Tod hinterlässt eine Spur.' },
+  7:  { name: 'Statische Verbindung', short: 'Zwei Spieler werden durch einen Lichtbogen verbunden – beide nehmen Schaden.',
+        detail: 'Zwei zufällige Spieler werden periodisch durch einen Lichtbogen verbunden, der beiden Schaden zufügt. Sichtlinie unterbrechen oder Distanz schließen.',
+        flavor: 'Zwei Stränge desselben Sturms.' },
+  8:  { name: 'Arkanecho', short: 'Gegner echoen Arkanschaden auf nahegelegene Spieler.',
+        detail: 'Arkane Energie echot von Gegnern und verursacht periodischen Schaden an nahegelegenen Spielern. Bleibt verteilt, vermeidet Stacking auf Packs.',
+        flavor: 'Das Geflecht erinnert sich an jedes Wort.' },
+  9:  { name: 'Nekrotisch', short: 'Nahkampftreffer stapeln einen 2%-Heilreduktion-Debuff.',
+        detail: 'Nahkampfangriffe von Gegnern stapeln einen Effekt, der erhaltene Heilung pro Stapel um 2% verringert. Tanks müssen kiten, Heiler triagieren.',
+        flavor: 'Eine Wunde, die das Heilen verlernt hat.' },
+  10: { name: 'Sternensturz', short: 'Astrale Sterne fallen herab und kollabieren in heftigen AoE.',
+        detail: 'Astrale Sterne fallen vom Himmel und kollabieren in Explosionen mit hohem Flächenschaden. Ständige Bewegung erforderlich.',
+        flavor: 'Der Himmel leert sich, langsam.' },
+  11: { name: 'Leerenmakel', short: 'Risse pulsen Schattenschaden und schwächen nahegelegene Spieler.',
+        detail: 'Leerenrisse öffnen sich im Dungeon, verursachen pulsierenden Schattenschaden und schwächen nahegelegene Spieler. Aggressiv verteilen und dispellen.',
+        flavor: 'Die Dunkelheit blickt zurück.' },
+  12: { name: 'Instabiler Fluss', short: 'Das Unterbrechen von Zaubern detoniert die Ladung.',
+        detail: 'Gegner sind mit instabiler Energie aufgeladen. Das Unterbrechen ihrer Zauber detoniert die Ladung und fügt nahen Spielern Schaden zu. Klug kicken, nicht reflexhaft.',
+        flavor: 'Stille hat seinen Preis.' },
+  13: { name: 'Seelenansturm', short: 'Erschlagene Gegner stärken eine Gequälte Seele, die auf Spieler zaubert.',
+        detail: 'Erschlagene Gegner setzen Seelenfragmente frei, die eine Gequälte Seele stärken. Die Seele zaubert auf Spieler — tötet sie, bevor sie kritische Masse erreicht.',
+        flavor: 'Die Toten erinnern sich, wo sie fielen.' },
+  14: { name: 'Tyraels Urteil', short: 'Stapelt euch nach jedem Boss auf Tyrael – oder die Ketten erwischen euch.',
+        detail: 'Tyrael erscheint nach jedem Boss-Kill. Stapelt euch auf ihm, um eine Belohnung zu erhalten. Schlagt ihr fehl, treffen euch die Ketten der Finsternis.',
+        flavor: 'Das Urteil wartet nicht auf eure Bereitschaft.' },
+  15: { name: 'Sturmgerufen', short: 'Boss-Treffer hinterlassen knisternde Blitzzonen.',
+        detail: 'Boss-Zauber hinterlassen knisternde Blitzzonen am Einschlag. Wer darin steht, erleidet periodischen Naturschaden. Ködert die Casts vom Rest der Gruppe weg.',
+        flavor: 'Es kümmert sich nicht darum, auf wessen Seite ihr seid.' },
+};
+
+/**
+ * Returns an Affix with the active locale's copy merged in. Pass `affix`
+ * unchanged for non-DE locales. Used by both the launcher's MythicPlus tab
+ * and the home AffixesCard so display strings track the user's chosen
+ * launcher language.
+ */
+export function localizeAffix(affix: Affix, locale: 'en' | 'de'): Affix {
+  if (locale !== 'de') return affix;
+  const ov = AFFIXES_DE[affix.id];
+  if (!ov) return affix;
+  return { ...affix, ...ov };
+}
+
 export function findAffix(idOrName: { id?: number | null; name?: string | null }): Affix | null {
   if (idOrName.id != null) {
     const byId = AFFIXES.find(a => a.id === idOrName.id);

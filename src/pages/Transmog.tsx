@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, type Item, type ItemSource } from "../api/cms";
+import { useT } from "../i18n/useT";
 
 const QUALITY_RING: Record<number, string> = {
   0: "ring-neutral-500",
@@ -52,6 +53,7 @@ function ItemIcon({ item, size = 40 }: { item: Item; size?: number }) {
 }
 
 export default function Transmog() {
+  const t = useT();
   const [wishlist, setWishlist] = useState<Item[]>([]);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Item[]>([]);
@@ -126,7 +128,7 @@ export default function Transmog() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold">Transmog wishlist</h1>
+      <h1 className="text-2xl font-semibold">{t("transmog.title")}</h1>
       {error && (
         <div className="rounded border border-red-900/60 bg-red-950/40 p-3 text-sm text-red-200">
           {error}
@@ -136,18 +138,18 @@ export default function Transmog() {
       <section className="rounded-lg border border-violet-500/20 bg-neutral-900/60 p-4">
         <div className="flex items-end justify-between gap-2">
           <label className="flex flex-1 flex-col gap-2 text-sm">
-            <span className="text-neutral-400">Find items</span>
+            <span className="text-neutral-400">{t("transmog.findItems")}</span>
             <div className="relative">
               <input
                 value={query}
                 onChange={(e) => doSearch(e.currentTarget.value)}
-                placeholder="Search by name (2+ chars)…"
+                placeholder={t("transmog.searchPlaceholder")}
                 className="w-full rounded border border-neutral-700 bg-neutral-950 px-3 py-2 pr-9 text-sm text-neutral-200"
               />
               {query.length > 0 && (
                 <button
                   type="button"
-                  aria-label="Clear search"
+                  aria-label={t("transmog.clearSearch")}
                   onClick={() => {
                     setQuery("");
                     setResults([]);
@@ -160,11 +162,11 @@ export default function Transmog() {
             </div>
           </label>
         </div>
-        {busy && <div className="mt-2 text-xs text-neutral-500">Searching…</div>}
+        {busy && <div className="mt-2 text-xs text-neutral-500">{t("transmog.searching")}</div>}
         {results.length > 0 && (
           <div className="mt-3">
             <div className="mb-2 flex items-center justify-between text-xs text-neutral-500">
-              <span>{results.length} result{results.length === 1 ? "" : "s"}</span>
+              <span>{t(results.length === 1 ? "transmog.results.one" : "transmog.results.many", { count: results.length })}</span>
               <button
                 onClick={() => {
                   setQuery("");
@@ -172,7 +174,7 @@ export default function Transmog() {
                 }}
                 className="rounded border border-neutral-700 px-2 py-0.5 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-200"
               >
-                Close
+                {t("transmog.close")}
               </button>
             </div>
             <ul className="flex flex-col gap-1">
@@ -194,7 +196,7 @@ export default function Transmog() {
                     onClick={() => add(it.id)}
                     className="rounded bg-violet-500 px-3 py-1 text-xs font-semibold text-neutral-950 hover:bg-violet-400"
                   >
-                    + Add
+                    {t("transmog.add")}
                   </button>
                 </li>
               ))}
@@ -205,11 +207,11 @@ export default function Transmog() {
 
       <section>
         <h2 className="mb-2 text-xs uppercase tracking-widest text-neutral-500">
-          On your wishlist ({wishlist.length})
+          {t("transmog.onWishlist", { count: wishlist.length })}
         </h2>
         {wishlist.length === 0 ? (
           <div className="rounded border border-dashed border-neutral-800 p-6 text-center text-sm text-neutral-500">
-            Nothing tracked yet. Search above to add items.
+            {t("transmog.empty")}
           </div>
         ) : (
           <ul className="flex flex-col gap-2">
@@ -233,19 +235,19 @@ export default function Transmog() {
                       onClick={() => showSources(it.id)}
                       className="rounded border border-neutral-700 px-3 py-1 text-xs hover:bg-neutral-800"
                     >
-                      Where?
+                      {t("transmog.where")}
                     </button>
                     <button
                       onClick={() => remove(it.id)}
                       className="rounded border border-red-900/60 px-3 py-1 text-xs text-red-300 hover:bg-red-950/40"
                     >
-                      Remove
+                      {t("transmog.remove")}
                     </button>
                   </div>
                 </div>
                 {sourcesFor === it.id && (
                   <ul className="mt-2 flex flex-col gap-1 border-t border-neutral-800 pt-2 text-xs text-neutral-400">
-                    {sources.length === 0 && <li>No known sources.</li>}
+                    {sources.length === 0 && <li>{t("transmog.noSources")}</li>}
                     {sources.map((s, i) => (
                       <li key={i}>
                         {s.type} · {s.name} ({s.zone})
